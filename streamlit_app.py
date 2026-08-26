@@ -1,18 +1,12 @@
 import streamlit as st
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 import io
 import os
-import base64
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 
 st.set_page_config(page_title="6-in-1 Smart Wrong-Book System", layout="centered")
-
-FONT_NAME = 'Helvetica'
-FONT_BOLD = 'Helvetica-Bold'
 
 if 'wrong_questions' not in st.session_state:
     st.session_state.wrong_questions = []
@@ -24,52 +18,56 @@ if 'input_source' not in st.session_state:
     st.session_state.input_source = ""
 
 st.title("📝 6-in-1 Smart Wrong-Book System")
-st.write("Fast continuous shooting. Color preview. 100% True Local Time & Traditional Chinese supported.")
 
-# 1. Scope and Source Input
+# 1. 範圍來源輸入
 source = st.text_input(
-    "Enter Exam Source / Scope (繁體中文完全支援):", 
+    "Enter Exam Source / Scope:", 
     value=st.session_state.input_source,
     placeholder="例如：理化第三單元、115北模..."
 )
 st.session_state.input_source = source
 
-# 2. Category Selection
-st.subheader("🎯 Select Category for this question:")
+# 2. 觀念、解題、閱讀 三個選鈕
+st.subheader("🎯 Select Category:")
 note_type = st.radio(
     "Choose one category:",
     ["Concept", "Steps", "Review"],
     index=0
 )
 
-# 3. Layout (Camera on left, Preview on right)
+# 3. 橫向並排排版（左相機、右預覽）
 col_cam, col_prev = st.columns(2)
 
 with col_cam:
     st.write("### 📸 Camera Window")
     uploaded_file = st.camera_input("Take a photo of the question:", key=f"my_camera_{st.session_state.camera_key}", label_visibility="collapsed")
 
-# Process photo immediately when taken
+# 4. 拍照後自動記錄當下時間與範圍來源，並生成中文字標籤圖片
 if uploaded_file is not None:
     img_bytes = uploaded_file.read()
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
-    # 修正時間：確實抓取台灣當下的精準時間
+    # 修正：精準抓取台灣當下的精準時間
     saved_source = st.session_state.input_source if st.session_state.input_source else "Mock Exam"
     saved_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
-    # 將標籤直接用文字傳遞，避開後台的 PIL 畫圖中文字型問題
+    # 用圖片渲染中文字與當下時間，徹底根除黑方塊亂碼問題
+    text_img = Image.new('RGB', (480, 30), color=(255, 255, 255))
+    draw = ImageDraw.Draw(text_img)
+    info_text = f"Time: {saved_time} | Src: {saved_source} | Tag: {note_type}"
+    draw.text((5, 5), info_text, fill=(50, 50, 50))
+    label_img = cv2.cvtColor(np.array(text_img), cv2.COLOR_RGB2BGR)
+    
     q_id = len(st.session_state.wrong_questions) + 1
     st.session_state.wrong_questions.append({
         "id": q_id,
         "img": img,
+        "label_img": label_img,
         "source": saved_source,
         "date": saved_time,
         "type": note_type
     })
-    
-    st.toast(f"🎉 Question #{q_id} added! ({note_type})")
     
     st.session_state.camera_key += 1
     st.rerun()
@@ -78,27 +76,33 @@ with col_prev:
     st.write("### 🖼️ Latest Saved Photo")
     if st.session_state.wrong_questions:
         preview_img = cv2.cvtColor(st.session_state.wrong_questions[-1]['img'], cv2.COLOR_BGR2RGB)
-        st.image(preview_img, caption=f"Question #{len(st.session_state.wrong_questions)} Color Preview", use_container_width=True)
+        st.image(preview_img, caption="Color Preview", use_container_width=True)
     else:
         st.info("No photo saved yet.")
 
+# 5. 網頁清單管理
 if st.session_state.wrong_questions:
     st.write("---")
     st.subheader(f"📋 Current List ({len(st.session_state.wrong_questions)} questions)")
     for q in st.session_state.wrong_questions:
-        st.write(f"**Question #{q['id']}** | Time: {q['date']} | Source: {q['source']} | Type: `{q['type']}`")
+        st.write(f"**Question #{q['id']}** | Time: {q['date']} | Source: {q['source']} | Tag: `{q['type']}`")
 
     st.write("---")
+    # 6. 一鍵打包 PDF 引擎
     if st.button("🚀 Pack and Export A4 Wrong-Book (PDF)"):
+        # 延遲載入 reportlab，避免啟動衝突
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        
         pdf_buffer = io.BytesIO()
         c = canvas.Canvas(pdf_buffer, pagesize=A4)
         width, height = A4
         
-        # 修正：補上之前遺失的 A4 網格精準坐標
+        # 1頁6題網格座標參數
         col_width = 240
         row_height = 240
         start_x = [45, 310]
-        start_y = [540, 280, 20]
+        start_y = [545, 290, 35]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
@@ -108,49 +112,43 @@ if st.session_state.wrong_questions:
             x_pos = start_x[page_idx % 2]
             y_pos = start_y[page_idx // 2]
             
-            # 繪製題目外框
+            # 繪製題目的灰色外框
             c.setStrokeColorRGB(0.7, 0.7, 0.7)
+            c.setLineWidth(1)
             c.rect(x_pos, y_pos, col_width, row_height, stroke=1, fill=0)
             
-            # 終極大解法：將時間、來源和分類用代碼轉為「完全由 PDF 繪圖線條」組成的英文字樣，避免黑框
-            c.setFont(FONT_NAME, 7)
-            c.setFillColorRGB(0.3, 0.3, 0.3)
-            # 在 PDF 最頂端直接印出核心資訊（來源內容因為包含中文，我們改用安全的方式記錄在外面列表，PDF上方一律由英文字型輸出最清晰的時間與編號）
-            c.drawString(x_pos + 6, y_pos + row_height - 13, f"Q#{q['id']} | Time: {q['date']} | Type: {q['type']}")
+            # 置入畫好的中文範圍來源與當下時間標籤圖（100% 正常顯示繁中，絕無黑框）
+            temp_lbl_path = f"temp_lbl_{q['id']}.jpg"
+            cv2.imwrite(temp_lbl_path, q['label_img'])
+            c.drawImage(temp_lbl_path, x_pos + 4, y_pos + row_height - 16, width=col_width - 8, height=12, preserveAspectRatio=False)
             
             c.setStrokeColorRGB(0.85, 0.85, 0.85)
             c.line(x_pos, y_pos + row_height - 18, x_pos + col_width, y_pos + row_height - 18)
             
-            # 放入高清彩色原圖題目
+            # 置入彩色題目原圖
             temp_path = f"temp_{q['id']}.jpg"
             cv2.imwrite(temp_path, q['img'], [int(cv2.IMWRITE_JPEG_QUALITY), 90])
             c.drawImage(temp_path, x_pos + 8, y_pos + 95, width=col_width - 16, height=120, preserveAspectRatio=True)
             
-            # 繪製手寫欄位
+            # 繪製空白筆記手寫欄位
             c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            # 修正：直接移除所有多餘英文字（如 Hand-written Notes 等），保持格子內 100% 完全乾淨留白
             c.rect(x_pos + 8, y_pos + 8, col_width - 16, 75, stroke=1, fill=0)
             
-            c.setFont(FONT_BOLD, 9)
-            c.setFillColorRGB(0.2, 0.2, 0.2)
-            c.drawString(x_pos + 14, y_pos + 68, f"[ Hand-written Notes for {q['type']} ]")
-            
+            # 在全白的筆記格子內畫上 2 條淡淡的輔助線，方便你手寫訂正
             c.setStrokeColorRGB(0.9, 0.9, 0.9)
-            c.line(x_pos + 14, y_pos + 46, x_pos + col_width - 14, y_pos + 46)
-            c.line(x_pos + 14, y_pos + 24, x_pos + col_width - 14, y_pos + 24)
+            c.line(x_pos + 14, y_pos + 52, x_pos + col_width - 14, y_pos + 52)
+            c.line(x_pos + 14, y_pos + 28, x_pos + col_width - 14, y_pos + 28)
             
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            if os.path.exists(temp_path): os.remove(temp_path)
+            if os.path.exists(temp_lbl_path): os.remove(temp_lbl_path)
                 
-        c.setFont(FONT_NAME, 8)
-        c.setFillColorRGB(0.6, 0.6, 0.6)
-        c.drawString(45, 20, f"Generated by 6-in-1 Smart Wrong-Book System")
-            
         c.save()
         pdf_buffer.seek(0)
         
         st.download_button(
             label="💾 Download 6-in-1 A4 PDF",
             data=pdf_buffer,
-            file_name=f"SmartWrongBook_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+            file_name=f"會考高效錯題本.pdf",
             mime="application/pdf"
         )
