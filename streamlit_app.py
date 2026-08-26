@@ -109,7 +109,7 @@ if st.session_state.wrong_questions:
         
         # 後台絕對寫死保護的 A4 一頁 6 題座標陣列
         start_x = [45, 310]
-        start_y = [535, 290, 45]
+        start_y = [540, 290, 40]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
