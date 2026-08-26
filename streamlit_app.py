@@ -1,3 +1,4 @@
+
 import streamlit as st
 import cv2
 import numpy as np
@@ -72,7 +73,7 @@ if st.session_state.wrong_questions:
     for q in st.session_state.wrong_questions:
         col_q, col_btn = st.columns()
         with col_q:
-            st.write(f"**題號 {q['id']}** | 來源：{q['source']} | 狀態：`{q['status']}`")
+            st.write(f"*題號 {q['id']}* | 來源：{q['source']} | 狀態：`{q['status']}`")
         with col_btn:
             if st.button(f"❌ 仍做錯 #{q['id']}", key=f"wrong_{q['id']}"):
                 q['status'] = "🔥 重點加強"
@@ -88,11 +89,11 @@ if st.session_state.wrong_questions:
         for q in st.session_state.wrong_questions:
             c.setFont(FONT_NAME, 10)
             c.drawString(50, height - 40, f"日期: {current_date} | 來源: {q['source']} | 狀態: {q['status']}")
-            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            c.setStrokeColorRGB(0.8, 0.8, 0.😎
             c.line(50, height - 45, width - 50, height - 45)
             c.drawString(50, height - 65, f"錯題編號 #{q['id']}:")
             
-            # 安全絕招：先存成臨時檔案再丟進 PDF
+            # 安全部屬：先存成臨時檔案再丟進 PDF
             temp_q_path = f"temp_q_{q['id']}.png"
             cv2.imwrite(temp_q_path, q['q_img'])
             c.drawImage(temp_q_path, 50, height - 300, width=width-100, height=220, preserveAspectRatio=True)
@@ -101,7 +102,7 @@ if st.session_state.wrong_questions:
             c.setFillColorRGB(0.5, 0.5, 0.5)
             c.drawString(50, height - 340, "【 觀念盲點紀錄與手寫訂正區 】")
             
-            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            c.setStrokeColorRGB(0.8, 0.8, 0.😎
             for i in range(8):
                 y_pos = height - 370 - (i * 30)
                 c.line(50, y_pos, width - 50, y_pos)
@@ -122,7 +123,7 @@ if st.session_state.wrong_questions:
             c.setFont(FONT_NAME, 12)
             c.drawString(50, y_pos + 110, f"題目 #{q['id']} 原始拍照記錄（內含答案）：")
             
-            # 安全絕招：原圖也先存成臨時檔案
+            # 安全部屬：原圖也先存成臨時檔案
             temp_a_path = f"temp_a_{q['id']}.png"
             cv2.imwrite(temp_a_path, q['original_img'])
             c.drawImage(temp_a_path, 50, y_pos, width=width-100, height=100, preserveAspectRatio=True)
