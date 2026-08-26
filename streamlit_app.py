@@ -104,8 +104,9 @@ if st.session_state.wrong_questions:
         row_height = 240
         
         # 網格座標後台安全保護寫死 (1頁6題)
-        start_x =
-        start_y =
+        start_x = [45, 310]
+        start_y = [530, 280, 30]
+
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
