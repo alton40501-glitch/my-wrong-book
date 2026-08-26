@@ -54,7 +54,7 @@ if uploaded_file is not None:
             "q_img": clean_q,
             "original_img": img,
             "source": source,
-            "status": "待複習"
+            "status": "Review"
         })
         st.toast(f"第 {q_id} 題已成功加入清單！")
 
@@ -68,7 +68,7 @@ if st.session_state.wrong_questions:
             st.write(f"*題號 {q['id']}* | 來源：{q['source']} | 狀態：`{q['status']}`")
         with col_btn:
             if st.button(f"❌ 仍做錯 #{q['id']}", key=f"wrong_{q['id']}"):
-                q['status'] = "🔥 重點加強"
+                q['status'] = "Urgent"
                 st.toast(f"題號 {q['id']} 已標記為重點加強題！")
 
     st.write("---")
