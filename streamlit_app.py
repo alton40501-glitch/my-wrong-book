@@ -113,7 +113,8 @@ if st.session_state.wrong_questions:
         row_height = 245 
         
         # A4 網格直向 Y 軸起點座標（防系統洗版安全包裝寫死）
-        start_y =
+        start_y = [550, 295, 40]
+
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 3
