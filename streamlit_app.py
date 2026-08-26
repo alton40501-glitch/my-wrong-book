@@ -1,11 +1,9 @@
-
 import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
 from datetime import datetime
 import io
-import urllib.request
 import os
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -14,15 +12,21 @@ from reportlab.pdfbase.ttfonts import TTFont
 
 st.set_page_config(page_title="會考高效錯題本產生器", layout="centered")
 
-# 下載雲端中文字型，確保繁體中文正常顯示
+# 修正：直接優先讀取 Mac 與 iOS 系統最完美的內建繁體中文字型
 FONT_NAME = 'Helvetica'
-try:
-    font_url = "https://github.com"
-    font_data = urllib.request.urlopen(font_url).read()
-    pdfmetrics.registerFont(TTFont('NotoSansTC', io.BytesIO(font_data)))
-    FONT_NAME = 'NotoSansTC'
-except Exception as e:
-    pass
+font_paths = [
+    '/System/Library/Fonts/PingFang.ttc', # Mac / iOS 蘋方
+    '/System/Library/Fonts/STHeiti Light.ttc', # 系統黑體
+    '/Library/Fonts/Microsoft/Microsoft Jhenghei.ttf' # 微軟正黑
+]
+for path in font_paths:
+    if os.path.exists(path):
+        try:
+            pdfmetrics.registerFont(TTFont('SystemTC', path))
+            FONT_NAME = 'SystemTC'
+            break
+        except:
+            pass
 
 if 'wrong_questions' not in st.session_state:
     st.session_state.wrong_questions = []
@@ -43,9 +47,10 @@ if uploaded_file is not None:
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
-    # 題目區：極為穩定的灰階與二值化轉換，100% 不會閃退
+    # 修正：改用高斯模糊 + 大津二值化，徹底濾除背景灰色顆粒與雜訊，讓紙張變純白！
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    clean_q = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    _, clean_q = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     
     st.success("影像處理成功！請確認下方分割結果：")
     
@@ -89,11 +94,10 @@ if st.session_state.wrong_questions:
         for q in st.session_state.wrong_questions:
             c.setFont(FONT_NAME, 10)
             c.drawString(50, height - 40, f"日期: {current_date} | 來源: {q['source']} | 狀態: {q['status']}")
-            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            c.setStrokeColorRGB(0.8, 0.8, 0.😎
             c.line(50, height - 45, width - 50, height - 45)
             c.drawString(50, height - 65, f"錯題編號 #{q['id']}:")
             
-            # 安全部屬：先存成臨時檔案再丟進 PDF
             temp_q_path = f"temp_q_{q['id']}.png"
             cv2.imwrite(temp_q_path, q['q_img'])
             c.drawImage(temp_q_path, 50, height - 300, width=width-100, height=220, preserveAspectRatio=True)
@@ -102,13 +106,12 @@ if st.session_state.wrong_questions:
             c.setFillColorRGB(0.5, 0.5, 0.5)
             c.drawString(50, height - 340, "【 觀念盲點紀錄與手寫訂正區 】")
             
-            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            c.setStrokeColorRGB(0.8, 0.8, 0.😎
             for i in range(8):
                 y_pos = height - 370 - (i * 30)
                 c.line(50, y_pos, width - 50, y_pos)
             c.showPage()
             
-            # 清理臨時檔案
             if os.path.exists(temp_q_path):
                 os.remove(temp_q_path)
             
@@ -123,12 +126,10 @@ if st.session_state.wrong_questions:
             c.setFont(FONT_NAME, 12)
             c.drawString(50, y_pos + 110, f"題目 #{q['id']} 原始拍照記錄（內含答案）：")
             
-            # 安全部屬：原圖也先存成臨時檔案
             temp_a_path = f"temp_a_{q['id']}.png"
             cv2.imwrite(temp_a_path, q['original_img'])
             c.drawImage(temp_a_path, 50, y_pos, width=width-100, height=100, preserveAspectRatio=True)
             
-            # 清理臨時檔案
             if os.path.exists(temp_a_path):
                 os.remove(temp_a_path)
             
