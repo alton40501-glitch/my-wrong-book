@@ -44,7 +44,6 @@ with st.form("wrong_book_form", clear_on_submit=True):
     )
     subject_custom = st.text_input("Custom Subject Note (Optional Textbox):", placeholder="e.g., Unit 3, Chapter 2...")
     
-    # 核心修正：刪除原本的多餘下拉選單，直接在核心單選鈕增加「Careless (粗心)」選項！
     note_type = st.radio(
         "Select Core Category:",
         ["Concept", "Steps", "Review", "Careless"],
@@ -72,10 +71,10 @@ if submitted and uploaded_files:
             
         star_string = "X" * importance_stars
         
-        # 保持最原始、最常態、完全沒拉長的大小尺寸
-        label_img = np.ones((25, 220, 3), dtype=np.uint8) * 255
+        # 核心優化：將標籤貼紙畫布高度與寬度微調，並將 FONT_HERSHEY_SIMPLEX 縮放比例由 0.33 大幅拉大加粗至 0.52 正常印刷大小！
+        label_img = np.ones((35, 480, 3), dtype=np.uint8) * 255
         safe_text = f"{saved_time} | {final_subject}"
-        cv2.putText(label_img, safe_text, (5, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (50, 50, 50), 1, cv2.LINE_AA)
+        cv2.putText(label_img, safe_text, (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (30, 30, 30), 2, cv2.LINE_AA)
         
         q_id = len(st.session_state.wrong_questions) + 1
         st.session_state.wrong_questions.append({
@@ -110,7 +109,7 @@ if st.session_state.wrong_questions:
         
         # 後台絕對寫死保護的 A4 一頁 6 題座標陣列
         start_x = [45, 310]
-        start_y = [545, 290, 35]
+        start_y = [535, 290, 45]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
@@ -125,10 +124,10 @@ if st.session_state.wrong_questions:
             c.setLineWidth(1)
             c.rect(x_pos, y_pos, col_width, row_height, stroke=1, fill=0)
             
-            # 頂欄完美恢復最原始小尺寸
+            # 核心優化：將大字體標籤貼紙完美對齊格子最頂端（width=232, height=14），字體飽滿、清晰好讀！
             temp_lbl_path = f"temp_lbl_{q['id']}.jpg"
             cv2.imwrite(temp_lbl_path, q['label_img'])
-            c.drawImage(temp_lbl_path, x_pos + 4, y_pos + row_height - 15, width=220, height=10, preserveAspectRatio=False)
+            c.drawImage(temp_lbl_path, x_pos + 4, y_pos + row_height - 16, width=232, height=14, preserveAspectRatio=False)
             
             c.setStrokeColorRGB(0.85, 0.85, 0.85)
             c.line(x_pos, y_pos + row_height - 18, x_pos + col_width, y_pos + row_height - 18)
@@ -150,7 +149,7 @@ if st.session_state.wrong_questions:
             c.setFillColorRGB(0.4, 0.4, 0.4)
             c.drawString(x_pos + 85, y_pos + 95, "1st: __/__   2nd: __/__   3rd: __/__   4th: __/__")
             
-            # 【下半部第二層】：Key Focus 錯題原因與優先度星星 (自動連動你點選的四選一標籤)
+            # 【下半部第二層】：Key Focus 錯題原因與優先度星星 
             c.setFont(FONT_BOLD, 7)
             c.setFillColorRGB(0.1, 0.1, 0.1)
             c.drawString(x_pos + 10, y_pos + 83, "Key Focus:")
@@ -165,9 +164,9 @@ if st.session_state.wrong_questions:
             c.drawString(x_pos + 10, y_pos + 70, "Core Notes & Analysis:")
             
             c.setStrokeColorRGB(0.9, 0.9, 0.9)
-            c.line(x_pos + 12, y_pos + 52, x_pos + col_width - 12, y_pos + 52) # 第 1 條線
-            c.line(x_pos + 12, y_pos + 34, x_pos + col_width - 12, y_pos + 34) # 第 2 條線
-            c.line(x_pos + 12, y_pos + 16, x_pos + col_width - 12, y_pos + 16) # 第 3 條線
+            c.line(x_pos + 12, y_pos + 52, x_pos + col_width - 12, y_pos + 52) 
+            c.line(x_pos + 12, y_pos + 34, x_pos + col_width - 12, y_pos + 34) 
+            c.line(x_pos + 12, y_pos + 16, x_pos + col_width - 12, y_pos + 16) 
             
             c.setFillColorRGB(0, 0, 0)
             if os.path.exists(temp_path): os.remove(temp_path)
