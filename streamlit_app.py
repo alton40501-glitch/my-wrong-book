@@ -102,7 +102,7 @@ if st.session_state.wrong_questions:
             c.setFillColorRGB(0.5, 0.5, 0.5)
             c.drawString(50, height - 340, "【 觀念盲點紀錄與手寫訂正區 】")
             
-            c.setStrokeColorRGB(0.8, 0.8, 0.😎
+            c.setStrokeColorRGB(0.8, 0.8, 0.8)
             for i in range(8):
                 y_pos = height - 370 - (i * 30)
                 c.line(50, y_pos, width - 50, y_pos)
