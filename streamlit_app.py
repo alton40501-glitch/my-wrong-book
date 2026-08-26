@@ -16,8 +16,8 @@ FONT_BOLD = 'Helvetica-Bold'
 if 'wrong_questions' not in st.session_state:
     st.session_state.wrong_questions = []
 
-st.title("📝 錯題本 (Continuous batch version)")
-st.write("零阻礙流：一次選取多張考卷照片，批量分類，一鍵打包 A4 六合一複習卷！")
+st.title("📝 錯題本")
+st.write("Fast continuous shooting. PDF strictly marks specific category.")
 
 # 網頁時間精準加 8 小時同步台灣時區
 web_timestamp = time.time() + (8 * 3600)
@@ -26,10 +26,10 @@ st.info(f"📅 Today's Date: {current_date}")
 
 st.write("---")
 
-# 【核心大升級】使用 Form 表單鎖定網頁，讓你怎麼選、怎麼拍都絕對不會觸發自動刷新！
+# 使用 Form 表單鎖定網頁，讓你怎麼選、怎麼拍都絕對不會觸發自動刷新！
 with st.form("wrong_book_form", clear_on_submit=True):
     st.subheader("📸 1. Select or Capture Multiple Photos")
-    # 支援一次打包複數上傳，你可以用平板相機連續拍好幾張，再一次丟進來！
+    # 支援一次打包複數上傳，一秒大量匯入
     uploaded_files = st.file_uploader(
         "Capture/Upload multiple images at once:", 
         type=["jpg", "jpeg", "png"], 
@@ -44,7 +44,6 @@ with st.form("wrong_book_form", clear_on_submit=True):
         index=0
     )
     
-    # 按下這個按鈕，才會一口氣把所有照片收進清單，徹底解決「不能連開連選」的痛點！
     submit_button = st.form_submit_with_ui_button if hasattr(st, 'form_submit_with_ui_button') else st.form_submit_button
     submitted = submit_button("📥 Save All Captured Questions to List")
 
@@ -74,17 +73,7 @@ if submitted and uploaded_files:
         })
     st.toast(f"🎉 Successfully added {len(uploaded_files)} questions to your list!")
 
-st.write("---")
-
-# 獨立排在下方的彩色預覽區
-st.subheader("🖼️ Latest Saved Photo Preview")
-if st.session_state.wrong_questions:
-    preview_img = cv2.cvtColor(st.session_state.wrong_questions[-1]['img'], cv2.COLOR_BGR2RGB)
-    st.image(preview_img, caption=f"Latest Question #{len(st.session_state.wrong_questions)} Color Preview", use_container_width=True)
-else:
-    st.info("No photo saved yet. Add questions via the form above!")
-
-# 4. 累積清單管理
+# 4. 累積清單管理 (原先夾在中間的照片預覽區塊已徹底刪除拔除)
 if st.session_state.wrong_questions:
     st.write("---")
     st.subheader(f"📋 Current List ({len(st.session_state.wrong_questions)} questions)")
@@ -103,10 +92,9 @@ if st.session_state.wrong_questions:
         col_width = 240
         row_height = 240
         
-        # 網格座標後台安全保護寫死 (1頁6題)
+        # 網格座標後台安全保護寫死（自動對齊 1 頁 6 題，絕對防洗白）
         start_x = [45, 310]
-        start_y = [530, 280, 30]
-
+        start_y = [540, 290, 40]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
@@ -121,7 +109,7 @@ if st.session_state.wrong_questions:
             c.setLineWidth(1)
             c.rect(x_pos, y_pos, col_width, row_height, stroke=1, fill=0)
             
-            # 置入 100% 絕不變框框、時間精準加8的向量標籤貼紙
+            # 置入 100% 絕不變框框、時間精準加8的標籤貼紙
             temp_lbl_path = f"temp_lbl_{q['id']}.jpg"
             cv2.imwrite(temp_lbl_path, q['label_img'])
             c.drawImage(temp_lbl_path, x_pos + 4, y_pos + row_height - 16, width=col_width - 8, height=12, preserveAspectRatio=False)
