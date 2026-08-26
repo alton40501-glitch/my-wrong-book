@@ -5,6 +5,7 @@ from PIL import Image
 from datetime import datetime
 import io
 import urllib.request
+import os
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
@@ -49,7 +50,6 @@ if uploaded_file is not None:
     
     col1, col2 = st.columns(2)
     with col1:
-        # 【完美修復點】將舊版的 use_column_width 改為新版的 use_container_width
         st.image(clean_q, caption="即將生成的乾淨題目", use_container_width=True)
     with col2:
         st.image(img, caption="原始拍照記錄（將集中置於末頁對答案）", use_container_width=True)
@@ -70,7 +70,7 @@ if st.session_state.wrong_questions:
     st.subheader("📋 本次累積錯題管理")
     
     for q in st.session_state.wrong_questions:
-        col_q, col_btn = st.columns(2)
+        col_q, col_btn = st.columns()
         with col_q:
             st.write(f"**題號 {q['id']}** | 來源：{q['source']} | 狀態：`{q['status']}`")
         with col_btn:
@@ -79,7 +79,7 @@ if st.session_state.wrong_questions:
                 st.toast(f"題號 {q['id']} 已標記為重點加強題！")
 
     st.write("---")
-        if st.button("🚀 一鍵打包輸出 A4 錯題本 (PDF)"):
+    if st.button("🚀 一鍵打包輸出 A4 錯題本 (PDF)"):
         pdf_buffer = io.BytesIO()
         c = canvas.Canvas(pdf_buffer, pagesize=A4)
         width, height = A4
@@ -107,6 +107,10 @@ if st.session_state.wrong_questions:
                 c.line(50, y_pos, width - 50, y_pos)
             c.showPage()
             
+            # 清理臨時檔案
+            if os.path.exists(temp_q_path):
+                os.remove(temp_q_path)
+            
         # 第二階段：在最後一頁集中顯示原始答案
         c.setFont(FONT_NAME, 16)
         c.setFillColorRGB(0, 0, 0)
@@ -122,6 +126,10 @@ if st.session_state.wrong_questions:
             temp_a_path = f"temp_a_{q['id']}.png"
             cv2.imwrite(temp_a_path, q['original_img'])
             c.drawImage(temp_a_path, 50, y_pos, width=width-100, height=100, preserveAspectRatio=True)
+            
+            # 清理臨時檔案
+            if os.path.exists(temp_a_path):
+                os.remove(temp_a_path)
             
         c.save()
         pdf_buffer.seek(0)
