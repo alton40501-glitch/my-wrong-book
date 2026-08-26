@@ -22,7 +22,7 @@ if 'camera_key' not in st.session_state:
 st.title("📝 錯題本")
 st.write("Fast continuous shooting. Color preview. PDF strictly marks specific category.")
 
-# 核心修正 1：網頁最上方的時間顯示也自動加 8 小時，完美同步台灣當下時間！
+# 網頁最上方的時間顯示也自動加 8 小時，完美同步台灣當下時間！
 web_timestamp = time.time() + (8 * 3600)
 current_date = datetime.fromtimestamp(web_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 st.info(f"📅 Today's Date: {current_date}")
@@ -35,27 +35,15 @@ note_type = st.radio(
     index=0
 )
 
-# 3. Layout (Camera on left, Preview on right)
-col_cam, col_prev = st.columns(2)
+st.write("---")
 
-with col_cam:
-    st.write("### 📸 Camera Window")
-    # 核心修正 2：在背後強制注入 HTML5 原生相機規範，100% 鎖定調用後置主鏡頭（environment），絕不開到自拍鏡頭！
-    st.components.v1.html(
-        """
-        <script>
-        // 強制鎖定所有網頁相機呼叫只准尋找背面主鏡頭
-        navigator.mediaDevices.getUserMedia = (orig => function(c) {
-            if (c && c.video) {
-                c.video = { facingMode: { exact: "environment" } };
-            }
-            return orig.call(navigator.mediaDevices, c);
-        })(navigator.mediaDevices.getUserMedia);
-        </script>
-        """,
-        height=0
-    )
-    uploaded_file = st.camera_input("Take a photo of the question:", key=f"my_camera_{st.session_state.camera_key}", label_visibility="collapsed")
+# 3. 核心修正：移除左右雙欄（st.columns），直接上下分行排列，讓視野變最大
+st.subheader("📸 Camera Window")
+uploaded_file = st.camera_input(
+    "Take a photo of the question:", 
+    key=f"my_camera_{st.session_state.camera_key}", 
+    label_visibility="collapsed"
+)
 
 # Process photo immediately when taken
 if uploaded_file is not None:
@@ -84,15 +72,17 @@ if uploaded_file is not None:
     st.session_state.camera_key += 1
     st.rerun()
 
-with col_prev:
-    st.write("### 🖼️ Latest Saved Photo")
-    if st.session_state.wrong_questions:
-        preview_img = cv2.cvtColor(st.session_state.wrong_questions[-1]['img'], cv2.COLOR_BGR2RGB)
-        st.image(preview_img, caption="Color Preview", use_container_width=True)
-    else:
-        st.info("No photo saved yet.")
+st.write("---")
 
-# 4. List Management
+# 4. 照片預覽區：獨立排在相機下方，放大呈現，檢查對焦超方便
+st.subheader("🖼️ Latest Saved Photo")
+if st.session_state.wrong_questions:
+    preview_img = cv2.cvtColor(st.session_state.wrong_questions[-1]['img'], cv2.COLOR_BGR2RGB)
+    st.image(preview_img, caption="Color Preview", use_container_width=True)
+else:
+    st.info("No photo saved yet. Capture your first question above!")
+
+# 5. List Management
 if st.session_state.wrong_questions:
     st.write("---")
     st.subheader(f"📋 Current List ({len(st.session_state.wrong_questions)} questions)")
@@ -111,7 +101,7 @@ if st.session_state.wrong_questions:
         col_width = 240
         row_height = 240
         
-        # 為了避免你每次都要手動打，我直接用安全的代碼把中括號與 A4 坐標數值在後台「寫死保護」，系統絕對不會再讓它變空白出錯！
+        # 後台絕對寫死保護的 A4 網格座標 (1頁6題)
         start_x = [45, 310]
         start_y = [540, 290, 40]
         
@@ -147,9 +137,9 @@ if st.session_state.wrong_questions:
             
             # 在大框框內精準均勻畫出 3 條淡淡的淺灰色橫格線
             c.setStrokeColorRGB(0.9, 0.9, 0.9)
-            c.line(x_pos + 14, y_pos + 58, x_pos + col_width - 14, y_pos + 58) # 第 1 條線
-            c.line(x_pos + 14, y_pos + 40, x_pos + col_width - 14, y_pos + 40) # 第 2 條線
-            c.line(x_pos + 14, y_pos + 22, x_pos + col_width - 14, y_pos + 22) # 第 3 條線
+            c.line(x_pos + 14, y_pos + 58, x_pos + col_width - 14, y_pos + 58)
+            c.line(x_pos + 14, y_pos + 40, x_pos + col_width - 14, y_pos + 40)
+            c.line(x_pos + 14, y_pos + 22, x_pos + col_width - 14, y_pos + 22)
             
             if os.path.exists(temp_path): os.remove(temp_path)
             if os.path.exists(temp_lbl_path): os.remove(temp_lbl_path)
