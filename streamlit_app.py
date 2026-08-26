@@ -94,7 +94,7 @@ if st.session_state.wrong_questions:
         for q in st.session_state.wrong_questions:
             c.setFont(FONT_NAME, 10)
             c.drawString(50, height - 40, f"日期: {current_date} | 來源: {q['source']} | 狀態: {q['status']}")
-            c.setStrokeColorRGB(0.8, 0.8, 0.😎
+            c.setStrokeColorRGB(0.8, 0.8, 0.8)
             c.line(50, height - 45, width - 50, height - 45)
             c.drawString(50, height - 65, f"錯題編號 #{q['id']}:")
             
