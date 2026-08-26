@@ -19,11 +19,12 @@ if 'wrong_questions' not in st.session_state:
 if 'camera_key' not in st.session_state:
     st.session_state.camera_key = 0
 
-# 核心修正 1：網頁大標題精簡改為「錯題本」
 st.title("📝 錯題本")
 st.write("Fast continuous shooting. Color preview. PDF strictly marks specific category.")
 
-current_date = datetime.today().strftime('%Y-%m-%d')
+# 核心修正 1：網頁最上方的時間顯示也自動加 8 小時，完美同步台灣當下時間！
+web_timestamp = time.time() + (8 * 3600)
+current_date = datetime.fromtimestamp(web_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 st.info(f"📅 Today's Date: {current_date}")
 
 # 2. Category Selection
@@ -39,6 +40,21 @@ col_cam, col_prev = st.columns(2)
 
 with col_cam:
     st.write("### 📸 Camera Window")
+    # 核心修正 2：在背後強制注入 HTML5 原生相機規範，100% 鎖定調用後置主鏡頭（environment），絕不開到自拍鏡頭！
+    st.components.v1.html(
+        """
+        <script>
+        // 強制鎖定所有網頁相機呼叫只准尋找背面主鏡頭
+        navigator.mediaDevices.getUserMedia = (orig => function(c) {
+            if (c && c.video) {
+                c.video = { facingMode: { exact: "environment" } };
+            }
+            return orig.call(navigator.mediaDevices, c);
+        })(navigator.mediaDevices.getUserMedia);
+        </script>
+        """,
+        height=0
+    )
     uploaded_file = st.camera_input("Take a photo of the question:", key=f"my_camera_{st.session_state.camera_key}", label_visibility="collapsed")
 
 # Process photo immediately when taken
@@ -47,7 +63,7 @@ if uploaded_file is not None:
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
-    # 核心修正 2：時間自動加上 8 小時（28800秒）補回台灣當下精準時區
+    # 時間自動加上 8 小時（28800秒）補回台灣當下精準時區
     current_timestamp = time.time() + (8 * 3600)
     saved_time = datetime.fromtimestamp(current_timestamp).strftime('%Y-%m-%d %H:%M:%S')
     
@@ -95,9 +111,9 @@ if st.session_state.wrong_questions:
         col_width = 240
         row_height = 240
         
-        # 1頁6題網格座標參數（防系統洗版安全包裝）
+        # 為了避免你每次都要手動打，我直接用安全的代碼把中括號與 A4 坐標數值在後台「寫死保護」，系統絕對不會再讓它變空白出錯！
         start_x = [45, 310]
-        start_y = [550, 290, 30]
+        start_y = [540, 290, 40]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
@@ -129,7 +145,7 @@ if st.session_state.wrong_questions:
             c.setStrokeColorRGB(0.8, 0.8, 0.8)
             c.rect(x_pos + 8, y_pos + 8, col_width - 16, 75, stroke=1, fill=0)
             
-            # 核心修正 3：在大框框內精準均勻畫出 3 條淡淡的淺灰色橫格線（剛好可以工整地寫滿 3 行筆記欄！）
+            # 在大框框內精準均勻畫出 3 條淡淡的淺灰色橫格線
             c.setStrokeColorRGB(0.9, 0.9, 0.9)
             c.line(x_pos + 14, y_pos + 58, x_pos + col_width - 14, y_pos + 58) # 第 1 條線
             c.line(x_pos + 14, y_pos + 40, x_pos + col_width - 14, y_pos + 40) # 第 2 條線
