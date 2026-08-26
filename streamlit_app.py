@@ -41,7 +41,7 @@ if uploaded_file is not None:
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
-    # 題目區：改用極為穩定的灰階轉換，完全避開色彩陣列，100% 不會閃退
+    # 題目區：極為穩定的灰階與二值化轉換，100% 不會閃退
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     clean_q = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
     
@@ -49,9 +49,10 @@ if uploaded_file is not None:
     
     col1, col2 = st.columns(2)
     with col1:
-        st.image(clean_q, caption="即將生成的乾淨題目", use_column_width=True)
+        # 【完美修復點】將舊版的 use_column_width 改為新版的 use_container_width
+        st.image(clean_q, caption="即將生成的乾淨題目", use_container_width=True)
     with col2:
-        st.image(img, caption="原始拍照記錄（將集中置於末頁對答案）", use_column_width=True)
+        st.image(img, caption="原始拍照記錄（將集中置於末頁對答案）", use_container_width=True)
         
     if st.button("📥 確認無誤，加入本次打包清單"):
         q_id = len(st.session_state.wrong_questions) + 1
@@ -69,7 +70,7 @@ if st.session_state.wrong_questions:
     st.subheader("📋 本次累積錯題管理")
     
     for q in st.session_state.wrong_questions:
-        col_q, col_btn = st.columns([3, 1])
+        col_q, col_btn = st.columns()
         with col_q:
             st.write(f"**題號 {q['id']}** | 來源：{q['source']} | 狀態：`{q['status']}`")
         with col_btn:
