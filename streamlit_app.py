@@ -124,7 +124,8 @@ if st.session_state.wrong_questions:
         row_height = 245 # 每題高度，騰出海量空間放置大筆記與計畫表
         
         # 3題直向排列的固定 y 軸起點座標（後台完全雙重加密防洗白寫死保護）
-        start_y =
+        start_y = [530, 275, 20]
+
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 3
