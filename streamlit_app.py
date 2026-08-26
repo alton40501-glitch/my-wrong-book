@@ -44,15 +44,11 @@ with st.form("wrong_book_form", clear_on_submit=True):
     )
     subject_custom = st.text_input("Custom Subject Note (Optional Textbox):", placeholder="e.g., Unit 3, Chapter 2...")
     
+    # 核心修正：刪除原本的多餘下拉選單，直接在核心單選鈕增加「Careless (粗心)」選項！
     note_type = st.radio(
         "Select Core Category:",
-        ["Concept", "Steps", "Review"],
+        ["Concept", "Steps", "Review", "Careless"],
         index=0
-    )
-    
-    review_reason = st.selectbox(
-        "If you chose 'Review', select the main reason:",
-        ["Careless & Misread (粗心及原因)", "Time Pressure (時間不夠)", "Concept Confused (觀念模糊)", "Anxiety (緊張失常)"]
     )
     
     importance_stars = st.slider("Select Importance Level (重要程度 1-5):", min_value=1, max_value=5, value=3)
@@ -89,7 +85,6 @@ if submitted and uploaded_files:
             "date": saved_time,
             "subject": final_subject,
             "type": note_type,
-            "reason": review_reason if note_type == "Review" else "N/A",
             "stars": importance_stars
         })
     st.toast(f"🚀 Successfully tracked {len(uploaded_files)} advanced wrong questions!")
@@ -115,7 +110,7 @@ if st.session_state.wrong_questions:
         
         # 後台絕對寫死保護的 A4 一頁 6 題座標陣列
         start_x = [45, 310]
-        start_y = [540, 290, 40]
+        start_y = [545, 290, 35]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
@@ -138,7 +133,7 @@ if st.session_state.wrong_questions:
             c.setStrokeColorRGB(0.85, 0.85, 0.85)
             c.line(x_pos, y_pos + row_height - 18, x_pos + col_width, y_pos + row_height - 18)
             
-            # 核心修正 1：題目圖檔改到格子的「上半部」，橫向拉滿（寬度 224），高度 110 留出完美正方形視野
+            # 題目圖檔改到格子的「上半部」，橫向拉滿（寬度 224），高度 110 留出完美正方形視野
             temp_path = f"temp_{q['id']}.jpg"
             cv2.imwrite(temp_path, q['img'], [int(cv2.IMWRITE_JPEG_QUALITY), 90])
             c.drawImage(temp_path, x_pos + 8, y_pos + 110, width=col_width - 16, height=110, preserveAspectRatio=True)
@@ -146,8 +141,6 @@ if st.session_state.wrong_questions:
             # 繪製一道水平分割線，把上半部的圖片跟下半部的計畫資訊筆記欄隔開
             c.setStrokeColorRGB(0.85, 0.85, 0.85)
             c.line(x_pos, y_pos + 105, x_pos + col_width, y_pos + 105)
-            
-            # 核心修正 2 & 3：下半部形成同一個大直欄，所有資訊與 3 行橫線「上下重疊，由上往下排放」
             
             # 【下半部第一層】：Review Tracker 追蹤進度
             c.setFont(FONT_BOLD, 7)
@@ -157,14 +150,14 @@ if st.session_state.wrong_questions:
             c.setFillColorRGB(0.4, 0.4, 0.4)
             c.drawString(x_pos + 85, y_pos + 95, "1st: __/__   2nd: __/__   3rd: __/__   4th: __/__")
             
-            # 【下半部第二層】：Key Focus 錯題原因與優先度星星
+            # 【下半部第二層】：Key Focus 錯題原因與優先度星星 (自動連動你點選的四選一標籤)
             c.setFont(FONT_BOLD, 7)
             c.setFillColorRGB(0.1, 0.1, 0.1)
             c.drawString(x_pos + 10, y_pos + 83, "Key Focus:")
             c.setFont(FONT_NAME, 6)
             c.setFillColorRGB(0.4, 0.4, 0.4)
             star_display = "★" * q['stars']
-            c.drawString(x_pos + 58, y_pos + 83, f"Type: {q['type']}  |  Reason: {q['reason'][:14]}  |  Priority: {star_display}")
+            c.drawString(x_pos + 58, y_pos + 83, f"Type: {q['type']}   |   Priority: {star_display}")
             
             # 【下半部第三層】：橫向大拉長的 3 行完全乾淨手寫格線線條
             c.setFont(FONT_BOLD, 7)
@@ -172,7 +165,6 @@ if st.session_state.wrong_questions:
             c.drawString(x_pos + 10, y_pos + 70, "Core Notes & Analysis:")
             
             c.setStrokeColorRGB(0.9, 0.9, 0.9)
-            # 橫線寬度直接跟著格子橫向大拉滿，寫字超好發揮！
             c.line(x_pos + 12, y_pos + 52, x_pos + col_width - 12, y_pos + 52) # 第 1 條線
             c.line(x_pos + 12, y_pos + 34, x_pos + col_width - 12, y_pos + 34) # 第 2 條線
             c.line(x_pos + 12, y_pos + 16, x_pos + col_width - 12, y_pos + 16) # 第 3 條線
