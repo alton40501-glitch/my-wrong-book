@@ -92,7 +92,7 @@ if st.session_state.wrong_questions:
             c.drawString(50, height - 65, f"錯題編號 #{q['id']}:")
             
             _, q_buf = cv2.imencode('.png', q['q_img'])
-            c.drawImage(Image.open(io.BytesIO(q_buf.tobytes())), 50, height - 300, width=width-100, height=220, preserveAspectRatio=True)
+            c.drawImage(Image.open(io.BytesIO(q_buf.tobytes())), 50, height - 300, width=width-100, height=220, preserveAspectRatio=True, mask='auto')
             
             c.setFont(FONT_NAME, 12)
             c.setFillColorRGB(0.5, 0.5, 0.5)
@@ -114,7 +114,7 @@ if st.session_state.wrong_questions:
             c.setFont(FONT_NAME, 12)
             c.drawString(50, y_pos + 110, f"題目 #{q['id']} 原始拍照記錄（內含答案）：")
             _, a_buf = cv2.imencode('.png', q['original_img'])
-            c.drawImage(Image.open(io.BytesIO(a_buf.tobytes())), 50, y_pos, width=width-100, height=100, preserveAspectRatio=True)
+            c.drawImage(Image.open(io.BytesIO(a_buf.tobytes())), 50, y_pos, width=width-100, height=100, preserveAspectRatio=True, mask='auto')
             
         c.save()
         pdf_buffer.seek(0)
