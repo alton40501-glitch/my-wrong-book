@@ -76,10 +76,10 @@ if submitted and uploaded_files:
             
         star_string = "X" * importance_stars
         
-        # 核心優化 1：最上方的資訊貼紙畫布寬度大幅縮減（原本480內縮回320），使其保持原本正常的短小精緻尺寸！
-        label_img = np.ones((30, 320, 3), dtype=np.uint8) * 255
-        safe_text = f"{saved_time} | {final_subject} | {note_type}"
-        cv2.putText(label_img, safe_text, (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (40, 40, 40), 1, cv2.LINE_AA)
+        # 核心優化 1：標籤貼紙畫布寬度徹底內縮回最原始、最常態、完全沒拉長的大小尺寸（寬度200、高度12）
+        label_img = np.ones((25, 220, 3), dtype=np.uint8) * 255
+        safe_text = f"{saved_time} | {final_subject}"
+        cv2.putText(label_img, safe_text, (5, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (50, 50, 50), 1, cv2.LINE_AA)
         
         q_id = len(st.session_state.wrong_questions) + 1
         st.session_state.wrong_questions.append({
@@ -112,9 +112,8 @@ if st.session_state.wrong_questions:
         col_width = 500  
         row_height = 245 
         
-        # A4 網格直向 Y 軸起點座標（防系統洗版安全包裝寫死）
-        start_y = [550, 295, 40]
-
+        # A4 1頁3題精準座標（後台全自動鎖定保護，防洗白寫死）
+        start_y = [520, 265, 10]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 3
@@ -129,10 +128,10 @@ if st.session_state.wrong_questions:
             c.setLineWidth(1)
             c.rect(x_pos, y_pos, col_width, row_height, stroke=1, fill=0)
             
-            # 配合縮短後的正常頂欄，將圖片繪製寬度內縮（width=320），完美歸位常態大小！
+            # 核心優化 1：貼紙完美縮回一開始的俐落尺寸（width=220, height=10），正常大小絕不拉長！
             temp_lbl_path = f"temp_lbl_{q['id']}.jpg"
             cv2.imwrite(temp_lbl_path, q['label_img'])
-            c.drawImage(temp_lbl_path, x_pos + 4, y_pos + row_height - 16, width=320, height=12, preserveAspectRatio=False)
+            c.drawImage(temp_lbl_path, x_pos + 4, y_pos + row_height - 15, width=220, height=10, preserveAspectRatio=False)
             
             c.setStrokeColorRGB(0.8, 0.8, 0.8)
             c.line(x_pos, y_pos + row_height - 18, x_pos + col_width, y_pos + row_height - 18)
@@ -145,45 +144,43 @@ if st.session_state.wrong_questions:
             # 底部完全留白大計畫框
             c.rect(x_pos + 12, y_pos + 8, col_width - 24, 75, stroke=1, fill=0)
             
-            # 核心優化 2：將 Review Tracker 和 Key Focus & Reason 這兩欄「全部移到最左邊，並且直向擺放」！
+            # 核心優化 2：將 Review Tracker 和 Key Focus 全部整合進「最左側的同一個直欄內（上下重疊疊放）」！
             
-            # 【最左側第一直欄】：Review Tracker 追蹤表
-            c.setFont(FONT_BOLD, 7.5)
+            # 【同一個左直欄 - 上半部】：Review Tracker
+            c.setFont(FONT_BOLD, 7)
             c.setFillColorRGB(0.1, 0.1, 0.1)
             c.drawString(x_pos + 18, y_pos + 68, "Review Tracker:")
-            c.setFont(FONT_NAME, 7)
-            c.setFillColorRGB(0.3, 0.3, 0.3)
-            c.drawString(x_pos + 20, y_pos + 53, "1st:  ___/___")
-            c.drawString(x_pos + 20, y_pos + 41, "2nd:  ___/___")
-            c.drawString(x_pos + 20, y_pos + 29, "3rd:  ___/___")
-            c.drawString(x_pos + 20, y_pos + 17, "4th:  ___/___")
-            
-            # 【第二直欄】：緊跟在旁邊的 Key Focus & Reason 分類星級區
-            c.setFont(FONT_BOLD, 7.5)
-            c.setFillColorRGB(0.1, 0.1, 0.1)
-            c.drawString(x_pos + 105, y_pos + 68, "Key Focus:")
-            c.setFont(FONT_NAME, 7)
+            c.setFont(FONT_NAME, 6.5)
             c.setFillColorRGB(0.4, 0.4, 0.4)
-            c.drawString(x_pos + 105, y_pos + 53, f"Type: {q['type']}")
-            c.drawString(x_pos + 105, y_pos + 41, f"Reason: {q['reason'][:13]}") # 自動截斷防擠壓
-            c.setFont(FONT_BOLD, 7.5)
+            c.drawString(x_pos + 20, y_pos + 58, "1st: ___/___  2nd: ___/___")
+            c.drawString(x_pos + 20, y_pos + 48, "3rd: ___/___  4th: ___/___")
+            
+            # 【同一個左直欄 - 下半部】：Key Focus 直接在下方對齊長出來
+            c.setFont(FONT_BOLD, 7)
+            c.setFillColorRGB(0.1, 0.1, 0.1)
+            c.drawString(x_pos + 18, y_pos + 36, "Key Focus & Reason:")
+            c.setFont(FONT_NAME, 6.5)
+            c.setFillColorRGB(0.4, 0.4, 0.4)
+            c.drawString(x_pos + 20, y_pos + 26, f"Type: {q['type']} | Rs: {q['reason'][:12]}")
+            
+            c.setFont(FONT_BOLD, 7)
             c.setFillColorRGB(0, 0, 0)
             star_display = "★" * q['stars']
-            c.drawString(x_pos + 105, y_pos + 17, f"Pri: {star_display}")
+            c.drawString(x_pos + 20, y_pos + 15, f"Priority: {star_display}")
             
-            # 繪製一道優雅的垂直垂直切分線，將左邊這兩大直欄完美與右邊的寫字區隔開
+            # 繪製一道優雅的垂直切分線，將最左邊這個「複合直欄」與右邊的寫字區隔開
             c.setStrokeColorRGB(0.85, 0.85, 0.85)
-            c.line(x_pos + 215, y_pos + 8, x_pos + 215, y_pos + 75)
+            c.line(x_pos + 150, y_pos + 8, x_pos + 150, y_pos + 75)
             
-            # 【右側極大化大欄位】：3行高質感手寫橫格線（Core Notes & Analysis）
+            # 【右側完全大拉長欄位】：3行高質感橫格手寫線
             c.setFont(FONT_BOLD, 8.5)
             c.setFillColorRGB(0.1, 0.1, 0.1)
-            c.drawString(x_pos + 225, y_pos + 68, "Core Notes & Analysis:")
+            c.drawString(x_pos + 160, y_pos + 68, "Core Notes & Analysis:")
             
-            # 橫線空間獲得大幅度極大化拓展，超好寫字！
-            c.line(x_pos + 225, y_pos + 48, x_pos + col_width - 18, y_pos + 48)
-            c.line(x_pos + 225, y_pos + 30, x_pos + col_width - 18, y_pos + 30)
-            c.line(x_pos + 225, y_pos + 12, x_pos + col_width - 18, y_pos + 12)
+            # 橫格線空間徹底橫向大拉長（起點160，一直拉到框框邊緣），超級好寫字！
+            c.line(x_pos + 160, y_pos + 48, x_pos + col_width - 18, y_pos + 48)
+            c.line(x_pos + 160, y_pos + 30, x_pos + col_width - 18, y_pos + 30)
+            c.line(x_pos + 160, y_pos + 12, x_pos + col_width - 18, y_pos + 12)
             
             if os.path.exists(temp_path): os.remove(temp_path)
             if os.path.exists(temp_lbl_path): os.remove(temp_lbl_path)
