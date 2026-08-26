@@ -1,3 +1,4 @@
+
 import streamlit as st
 import cv2
 import numpy as np
@@ -7,31 +8,17 @@ import io
 import os
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 
 st.set_page_config(page_title="會考高效錯題本產生器", layout="centered")
 
-# 修正：直接優先讀取 Mac 與 iOS 系統最完美的內建繁體中文字型
+# 全面改用標準英文 Helvetica 字型，100% 避開雲端中文字型亂碼崩潰
 FONT_NAME = 'Helvetica'
-font_paths = [
-    '/System/Library/Fonts/PingFang.ttc', # Mac / iOS 蘋方
-    '/System/Library/Fonts/STHeiti Light.ttc', # 系統黑體
-    '/Library/Fonts/Microsoft/Microsoft Jhenghei.ttf' # 微軟正黑
-]
-for path in font_paths:
-    if os.path.exists(path):
-        try:
-            pdfmetrics.registerFont(TTFont('SystemTC', path))
-            FONT_NAME = 'SystemTC'
-            break
-        except:
-            pass
+FONT_BOLD = 'Helvetica-Bold'
 
 if 'wrong_questions' not in st.session_state:
     st.session_state.wrong_questions = []
 
-st.title("📝 會考專屬錯題本系統")
+st.title("📝 會考專屬錯題本系統 (Ultimate Edition)")
 st.write("直接拍照即可自動轉換為空白題目，原始照片集中在最後一頁方便對答！")
 
 current_date = datetime.today().strftime('%Y-%m-%d')
@@ -47,10 +34,10 @@ if uploaded_file is not None:
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
-    # 修正：改用高斯模糊 + 大津二值化，徹底濾除背景灰色顆粒與雜訊，讓紙張變純白！
+    # 影像大升級：先進行細微高斯模糊，再用大方塊自適應二值化，字體清晰且完美拔除顆粒雜訊
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    _, clean_q = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    clean_q = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 7)
     
     st.success("影像處理成功！請確認下方分割結果：")
     
@@ -90,23 +77,25 @@ if st.session_state.wrong_questions:
         c = canvas.Canvas(pdf_buffer, pagesize=A4)
         width, height = A4
         
-        # 第一階段：印出題目與訂正區
+        # 第一階段：印出題目與訂正區 (極簡質感英文排版)
         for q in st.session_state.wrong_questions:
             c.setFont(FONT_NAME, 10)
-            c.drawString(50, height - 40, f"日期: {current_date} | 來源: {q['source']} | 狀態: {q['status']}")
-            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            c.drawString(50, height - 40, f"Date: {current_date} | Source: {q['source']} | Status: {q['status']}")
+            c.setStrokeColorRGB(0.8, 0.8, 0.😎
             c.line(50, height - 45, width - 50, height - 45)
-            c.drawString(50, height - 65, f"錯題編號 #{q['id']}:")
+            
+            c.setFont(FONT_BOLD, 12)
+            c.drawString(50, height - 65, f"Question #{q['id']}:")
             
             temp_q_path = f"temp_q_{q['id']}.png"
             cv2.imwrite(temp_q_path, q['q_img'])
             c.drawImage(temp_q_path, 50, height - 300, width=width-100, height=220, preserveAspectRatio=True)
             
-            c.setFont(FONT_NAME, 12)
-            c.setFillColorRGB(0.5, 0.5, 0.5)
-            c.drawString(50, height - 340, "【 觀念盲點紀錄與手寫訂正區 】")
+            c.setFont(FONT_BOLD, 11)
+            c.setFillColorRGB(0.4, 0.4, 0.4)
+            c.drawString(50, height - 340, "[ Notes & Corrections ]")
             
-            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            c.setStrokeColorRGB(0.85, 0.85, 0.85)
             for i in range(8):
                 y_pos = height - 370 - (i * 30)
                 c.line(50, y_pos, width - 50, y_pos)
@@ -116,15 +105,15 @@ if st.session_state.wrong_questions:
                 os.remove(temp_q_path)
             
         # 第二階段：在最後一頁集中顯示原始答案
-        c.setFont(FONT_NAME, 16)
+        c.setFont(FONT_BOLD, 16)
         c.setFillColorRGB(0, 0, 0)
-        c.drawString(50, height - 50, "【 本次錯題本 — 原始答案對照區 】")
+        c.drawString(50, height - 50, "【 Answer Keys & Original Records 】")
         c.line(50, height - 60, width - 50, height - 60)
         
         for q in st.session_state.wrong_questions:
             y_pos = height - 120 - ((q['id']-1) * 150)
             c.setFont(FONT_NAME, 12)
-            c.drawString(50, y_pos + 110, f"題目 #{q['id']} 原始拍照記錄（內含答案）：")
+            c.drawString(50, y_pos + 110, f"Question #{q['id']} Original Record:")
             
             temp_a_path = f"temp_a_{q['id']}.png"
             cv2.imwrite(temp_a_path, q['original_img'])
@@ -137,8 +126,8 @@ if st.session_state.wrong_questions:
         pdf_buffer.seek(0)
         
         st.download_button(
-            label="💾 點我下載標準 A4 錯題卷.pdf",
+            label="💾 Download A4 Wrong-Book PDF",
             data=pdf_buffer,
-            file_name=f"會考錯題本_{current_date}.pdf",
+            file_name=f"会考错题本_{current_date}.pdf",
             mime="application/pdf"
         )
