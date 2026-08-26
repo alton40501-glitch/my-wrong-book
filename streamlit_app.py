@@ -8,7 +8,7 @@ import os
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-st.set_page_config(page_title="會考高效 1頁6題 錯題本", layout="centered")
+st.set_page_config(page_title="會考高效客製錯題本", layout="centered")
 
 # 使用標準英文 Helvetica 字型，確保 100% 繞過亂碼黑方塊
 FONT_NAME = 'Helvetica'
@@ -17,119 +17,126 @@ FONT_BOLD = 'Helvetica-Bold'
 if 'wrong_questions' not in st.session_state:
     st.session_state.wrong_questions = []
 
-st.title("📝 6-in-1 會考極速錯題本系統")
-st.write("精準會考流：一頁排滿 6 題，預留專用分析四格區塊。")
+st.title("📝 智慧化會考錯題筆記系統")
+st.write("手機拍照並即時輸入：觀念、解題與閱讀筆記，自動排版產出 A4 詳解本！")
 
 current_date = datetime.today().strftime('%Y-%m-%d')
-st.info(f"📅 Date: {current_date}")
+st.info(f"📅 Today's Date: {current_date}")
 
-source = st.text_input("輸入範圍來源 (例如：115北模、理化第三單元)", placeholder="請輸入...")
+# 1. 基礎資訊輸入 (範圍來源)
+source = st.text_input("輸入範圍來源 (例如：115北模、理化第三單元)", placeholder="請輸入考卷來源...")
 
-# 修正：強制手機/平板只能開啟「後置視訊主鏡頭 (environment)」，確保拍考卷字體清晰不反轉
-uploaded_file = st.camera_input("📸 請對準考卷題目拍照 (已鎖定後置鏡頭)")
+# 2. 手機相機上傳 (鎖定後置視訊鏡頭)
+uploaded_file = st.camera_input("📸 請對準考卷題目拍照")
+
+# 3. 核心功能：直接在網頁上加入「觀念、解題、閱讀」的輸入選項
+st.subheader("💡 錯題即時筆記欄位 (可留空，有輸入會自動印在 PDF 上)")
+note_concept = st.text_area("🧠 觀念分析 (這題考了什麼核心觀念？公式？)", placeholder="例如：透鏡折射規律、物體在兩倍焦距外成像...")
+note_steps = st.text_area("🛠️ 解題步驟 (這題要怎麼算？怎麼推導？)", placeholder="例如：1. 畫出光線折射路徑 2. 套用公式 3. 刪除法選B...")
+note_review = st.text_area("📖 閱讀與盲點複習 (當時為什麼錯？)", placeholder="例如：題目看太快，粗心把凸透鏡看成凹透鏡...")
 
 if uploaded_file is not None:
     img_bytes = uploaded_file.read()
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
-    st.success("照片已成功存檔記錄！")
-    st.image(img, caption="照片存檔預覽", use_container_width=True)
+    st.success("照片已成功捕捉！")
+    st.image(img, caption="照片預覽", use_container_width=True)
         
-    if st.button("📥 確認無誤，加入本次打包清單"):
+    if st.button("📥 確認無誤，將照片與筆記加入打包清單"):
         q_id = len(st.session_state.wrong_questions) + 1
         st.session_state.wrong_questions.append({
             "id": q_id,
             "img": img,
-            "source": source if source else "Mock Exam"
+            "source": source if source else "Mock Exam",
+            "date": current_date,
+            "concept": note_concept if note_concept else "None",
+            "steps": note_steps if note_steps else "None",
+            "review": note_review if note_review else "None"
         })
-        st.toast(f"第 {q_id} 題已成功加入清單！")
+        st.toast(f"第 {q_id} 題與筆記已成功同步加入清單！")
 
 if st.session_state.wrong_questions:
     st.write("---")
-    st.subheader(f"📋 本次累積錯題管理 (已錄入 {len(st.session_state.wrong_questions)} 題)")
+    st.subheader(f"📋 目前累積的錯題清單 ({len(st.session_state.wrong_questions)} 題)")
     
     for q in st.session_state.wrong_questions:
-        st.write(f"**Question #{q['id']}** | Source: {q['source']}")
+        st.write(f"**Question #{q['id']}** | 來源: {q['source']} | 筆記已同步記錄")
 
     st.write("---")
     if st.button("🚀 一鍵打包輸出 A4 錯題本 (PDF)"):
         pdf_buffer = io.BytesIO()
         c = canvas.Canvas(pdf_buffer, pagesize=A4)
-        width, height = A4  # A4 標準寬 595.27, 高 841.89
+        width, height = A4
         
-        # 定義 1頁 6 題的網格參數 (2排 3列)
-        col_width = 240
-        row_height = 240
-        
-        start_x = [45, 310]  # 左側與右側的起點
-        start_y = [560, 310, 60]  # 上、中、下三排的起點
-        
-        for idx, q in enumerate(st.session_state.wrong_questions):
-            page_idx = idx % 6
-            if idx > 0 and page_idx == 0:
-                c.showPage() # 滿 6 題自動跳下一頁
+        # 每一頁排 2 題，上方放彩色原圖題目，下方放完美的筆記對齊欄
+        for i, q in enumerate(st.session_state.wrong_questions):
+            # 每 2 題自動切換下一頁
+            if i > 0 and i % 2 == 0:
+                c.showPage()
                 
-            # 計算目前這題應該放在 A4 頁面的哪個格子
-            x_pos = start_x[page_idx % 2]
-            y_pos = start_y[page_idx // 2]
+            # 判斷是目前頁面的上半部 (第1題) 還是下半部 (第2題)
+            is_top = (i % 2 == 0)
+            y_offset = 0 if is_top else -390
             
-            # 1. 繪製每題的外框與標題欄
-            c.setStrokeColorRGB(0.7, 0.7, 0.7)
-            c.setLineWidth(1)
-            c.rect(x_pos, y_pos, col_width, row_height, stroke=1, fill=0)
+            # 1. 標示加入時間跟範圍來源與編號 (全英文避開亂碼)
+            c.setFont(FONT_NAME, 9)
+            c.setFillColorRGB(0.3, 0.3, 0.3)
+            c.drawString(50, height - 35 + y_offset, f"Date: {q['date']} | Source: {q['source']}")
+            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            c.line(50, height - 40 + y_offset, width - 50, height - 40 + y_offset)
             
-            # 2. 印出題目資訊標題
-            c.setFont(FONT_BOLD, 9)
-            c.drawString(x_pos + 8, y_pos + row_height - 15, f"#{q['id']} Source: {q['source']}")
-            c.setStrokeColorRGB(0.85, 0.85, 0.85)
-            c.line(x_pos, y_pos + row_height - 20, x_pos + col_width, y_pos + row_height - 20)
+            c.setFont(FONT_BOLD, 12)
+            c.setFillColorRGB(0, 0, 0)
+            c.drawString(50, height - 55 + y_offset, f"Question #{q['id']}:")
             
-            # 3. 置入彩色原圖題目（橫向壓扁適應格子，維持彩色）
+            # 2. 放入高清彩色考卷原圖
             temp_path = f"temp_{q['id']}.jpg"
             cv2.imwrite(temp_path, q['img'], [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-            c.drawImage(temp_path, x_pos + 8, y_pos + 105, width=col_width - 16, height=110, preserveAspectRatio=True)
+            c.drawImage(temp_path, 50, height - 210 + y_offset, width=width-100, height=150, preserveAspectRatio=True)
             
-            # 4. 繪製你要求的「選項、觀念、解題、閱讀」四格極簡分析區
-            box_w = (col_width - 16) / 2 # 每小格寬度
-            box_h = 42 # 每小格高度
+            # 3. 繪製精美的筆記欄位（自動帶入你在手機上寫的文字）
+            c.setFont(FONT_BOLD, 10)
+            c.setFillColorRGB(0.1, 0.1, 0.1)
             
-            c.setStrokeColorRGB(0.85, 0.85, 0.85)
-            # 左上格：Options (選項)
-            c.rect(x_pos + 8, y_pos + 55, box_w, box_h, stroke=1, fill=0)
-            c.setFont(FONT_NAME, 8)
-            c.setFillColorRGB(0.5, 0.5, 0.5)
-            c.drawString(x_pos + 12, y_pos + 55 + box_h - 10, "[ Options ]")
+            # 觀念區 (Concept)
+            c.drawString(50, height - 230 + y_offset, "[ Concept ]")
+            c.setFont(FONT_NAME, 9)
+            c.setFillColorRGB(0.4, 0.4, 0.4)
+            c.drawString(60, height - 245 + y_offset, f"{q['concept']}")
             
-            # 右上格：Concept (觀念)
-            c.rect(x_pos + 8 + box_w, y_pos + 55, box_w, box_h, stroke=1, fill=0)
-            c.drawString(x_pos + 12 + box_w, y_pos + 55 + box_h - 10, "[ Concept ]")
+            # 解題區 (Steps)
+            c.setFont(FONT_BOLD, 10)
+            c.setFillColorRGB(0.1, 0.1, 0.1)
+            c.drawString(50, height - 270 + y_offset, "[ Steps ]")
+            c.setFont(FONT_NAME, 9)
+            c.setFillColorRGB(0.4, 0.4, 0.4)
+            c.drawString(60, height - 285 + y_offset, f"{q['steps']}")
             
-            # 左下格：Steps (解題)
-            c.rect(x_pos + 8, y_pos + 10, box_w, box_h, stroke=1, fill=0)
-            c.drawString(x_pos + 12, y_pos + 10 + box_h - 10, "[ Steps ]")
+            # 閱讀區 (Review)
+            c.setFont(FONT_BOLD, 10)
+            c.setFillColorRGB(0.1, 0.1, 0.1)
+            c.drawString(50, height - 310 + y_offset, "[ Review ]")
+            c.setFont(FONT_NAME, 9)
+            c.setFillColorRGB(0.4, 0.4, 0.4)
+            c.drawString(60, height - 325 + y_offset, f"{q['review']}")
             
-            # 右下格：Review (閱讀/複習)
-            c.rect(x_pos + 8 + box_w, y_pos + 10, box_w, box_h, stroke=1, fill=0)
-            c.drawString(x_pos + 12 + box_w, y_pos + 10 + box_h - 10, "[ Review ]")
-            
-            # 恢復畫筆顏色為純黑
-            c.setFillColorRGB(0, 0, 0)
+            # 題與題之間的裝飾虛線
+            if is_top:
+                c.setStrokeColorRGB(0.85, 0.85, 0.85)
+                c.setDash(2, 2)
+                c.line(50, height - 370, width - 50, height - 370)
+                c.setDash(1, 0) # 恢復實線
             
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-                
-        # 繪製頁腳日期
-        c.setFont(FONT_NAME, 8)
-        c.setFillColorRGB(0.6, 0.6, 0.6)
-        c.drawString(45, 25, f"Generated by Extreme Wrong-Book System | Date: {current_date}")
             
         c.save()
         pdf_buffer.seek(0)
         
         st.download_button(
-            label="💾 Download 6-in-1 A4 PDF",
+            label="💾 Download Smart A4 Wrong-Book PDF",
             data=pdf_buffer,
-            file_name=f"會考高效六合一錯題本_{current_date}.pdf",
+            file_name=f"會考智慧錯題本_{current_date}.pdf",
             mime="application/pdf"
         )
