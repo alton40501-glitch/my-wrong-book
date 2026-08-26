@@ -81,7 +81,7 @@ if st.session_state.wrong_questions:
         for q in st.session_state.wrong_questions:
             c.setFont(FONT_NAME, 10)
             c.drawString(50, height - 40, f"Date: {current_date} | Source: {q['source']} | Status: {q['status']}")
-            c.setStrokeColorRGB(0.8, 0.8, 0.😎
+            c.setStrokeColorRGB(0.8, 0.8, 0.8)
             c.line(50, height - 45, width - 50, height - 45)
             
             c.setFont(FONT_BOLD, 12)
