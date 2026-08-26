@@ -18,7 +18,7 @@ if 'wrong_questions' not in st.session_state:
     st.session_state.wrong_questions = []
 
 st.title("📝 6-in-1 Smart Wrong-Book System")
-st.write("極速分類流：手機拍照、一鍵點選錯題類別，自動產出 1 頁 6 題帶手寫筆記欄的 A4 複習卷！")
+st.write("極速自動流：手機拍照、一鍵點選錯題類別，自動產出 1 頁 6 題帶手寫筆記欄的 A4 複習卷！")
 
 current_date = datetime.today().strftime('%Y-%m-%d')
 st.info(f"📅 Today's Date: {current_date}")
@@ -26,10 +26,7 @@ st.info(f"📅 Today's Date: {current_date}")
 # 1. 基礎資訊輸入 (範圍來源)
 source = st.text_input("輸入範圍來源 (例如：115北模、理化第三單元)", placeholder="請輸入考卷來源...")
 
-# 2. 手機相機上傳 (鎖定視訊主鏡頭)
-uploaded_file = st.camera_input("📸 請對準考卷題目拍照")
-
-# 3. 核心升級：加入 3 個按鈕讓你用點選的（觀念、解題、閱讀，全面改成純英文避開亂碼）
+# 2. 核心升級：將選擇分類鈕放到相機上方，確保拍照時能直接讀取到正確的標籤
 st.subheader("🎯 Select Note Type for this question:")
 note_type = st.radio(
     "Choose one category:",
@@ -37,24 +34,30 @@ note_type = st.radio(
     index=0
 )
 
+# 3. 手機相機上傳 (鎖定視訊主鏡頭)
+uploaded_file = st.camera_input("📸 請對準考卷題目拍照")
+
+# 核心升級：只要相機一拍好照片，直接觸發自動新增，不需要再多點按鈕！
 if uploaded_file is not None:
     img_bytes = uploaded_file.read()
-    nparr = np.frombuffer(img_bytes, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
-    st.success(f"Photo captured! Category: [{note_type}]")
-    st.image(img, caption="Photo Preview", use_container_width=True)
+    # 用 file_id 來當作唯一的拍照標記，避免網頁重新整理時重複觸發新增
+    if 'last_processed_file' not in st.session_state or st.session_state.last_processed_file != uploaded_file.file_id:
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-    if st.button("📥 Confirm & Add to list"):
         q_id = len(st.session_state.wrong_questions) + 1
         st.session_state.wrong_questions.append({
             "id": q_id,
             "img": img,
             "source": source if source else "Mock Exam",
             "date": current_date,
-            "type": note_type  # 記錄使用者點選的選項
+            "type": note_type
         })
-        st.toast(f"Question #{q_id} added successfully!")
+        # 標記此照片已處理過
+        st.session_state.last_processed_file = uploaded_file.file_id
+        st.success(f"🎉 Question #{q_id} 已自動加入清單！ (Category: {note_type})")
+        st.image(img, caption=f"Question #{q_id} Preview", use_container_width=True)
 
 if st.session_state.wrong_questions:
     st.write("---")
@@ -74,7 +77,7 @@ if st.session_state.wrong_questions:
         row_height = 240
         
         start_x = [45, 310]          # 左欄起點 45, 右欄起點 310
-        start_y = [550, 300, 50]     # 上、中、下三排的起點 y 座標
+        start_y = [550, 290, 30]     # 上、中、下三排的起點 y 座標
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
@@ -102,7 +105,7 @@ if st.session_state.wrong_questions:
             cv2.imwrite(temp_path, q['img'], [int(cv2.IMWRITE_JPEG_QUALITY), 90])
             c.drawImage(temp_path, x_pos + 8, y_pos + 95, width=col_width - 16, height=120, preserveAspectRatio=True)
             
-            # 4. 繪製你要求的專用分類空白手寫格
+            # 4. 繪製專用分類空白手寫格
             c.setStrokeColorRGB(0.8, 0.8, 0.8)
             # 大外框：留白的筆記欄位
             c.rect(x_pos + 8, y_pos + 8, col_width - 16, 75, stroke=1, fill=0)
