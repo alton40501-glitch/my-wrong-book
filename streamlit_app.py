@@ -16,7 +16,7 @@ if 'wrong_questions' not in st.session_state:
     st.session_state.wrong_questions = []
 
 st.title("📝 錯題本")
-st.write("Fast continuous shooting. Color preview. 6-in-1 layout with Left-aligned images and Right-aligned notes.")
+st.write("Fast continuous shooting. Color preview. 6-in-1 layout with Top images and Bottom notes.")
 
 # 網頁時間精準加 8 小時同步台灣時區
 web_timestamp = time.time() + (8 * 3600)
@@ -76,7 +76,7 @@ if submitted and uploaded_files:
             
         star_string = "X" * importance_stars
         
-        # 保持最原始、最常態、完全沒拉長的大小尺寸（寬度200、高度12）
+        # 保持最原始、最常態、完全沒拉長的大小尺寸
         label_img = np.ones((25, 220, 3), dtype=np.uint8) * 255
         safe_text = f"{saved_time} | {final_subject}"
         cv2.putText(label_img, safe_text, (5, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (50, 50, 50), 1, cv2.LINE_AA)
@@ -115,7 +115,7 @@ if st.session_state.wrong_questions:
         
         # 後台絕對寫死保護的 A4 一頁 6 題座標陣列
         start_x = [45, 310]
-        start_y = [545, 290, 35]
+        start_y = [540, 290, 40]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
@@ -130,7 +130,7 @@ if st.session_state.wrong_questions:
             c.setLineWidth(1)
             c.rect(x_pos, y_pos, col_width, row_height, stroke=1, fill=0)
             
-            # 頂欄完美恢復最原始小尺寸（width=220, height=10）
+            # 頂欄完美恢復最原始小尺寸
             temp_lbl_path = f"temp_lbl_{q['id']}.jpg"
             cv2.imwrite(temp_lbl_path, q['label_img'])
             c.drawImage(temp_lbl_path, x_pos + 4, y_pos + row_height - 15, width=220, height=10, preserveAspectRatio=False)
@@ -138,50 +138,44 @@ if st.session_state.wrong_questions:
             c.setStrokeColorRGB(0.85, 0.85, 0.85)
             c.line(x_pos, y_pos + row_height - 18, x_pos + col_width, y_pos + row_height - 18)
             
-            # 核心修正 1：題目圖檔「完美拉到最左邊」，分配寬度 110 (佔據整個格子的左半邊)
+            # 核心修正 1：題目圖檔改到格子的「上半部」，橫向拉滿（寬度 224），高度 110 留出完美正方形視野
             temp_path = f"temp_{q['id']}.jpg"
             cv2.imwrite(temp_path, q['img'], [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-            c.drawImage(temp_path, x_pos + 6, y_pos + 8, width=110, height=210, preserveAspectRatio=True)
+            c.drawImage(temp_path, x_pos + 8, y_pos + 110, width=col_width - 16, height=110, preserveAspectRatio=True)
             
-            # 繪製一道垂直中線，把左邊的照片區跟右邊的直向筆記計畫區分開
+            # 繪製一道水平分割線，把上半部的圖片跟下半部的計畫資訊筆記欄隔開
             c.setStrokeColorRGB(0.85, 0.85, 0.85)
-            c.line(x_pos + 120, y_pos + 8, x_pos + 120, y_pos + row_height - 18)
+            c.line(x_pos, y_pos + 105, x_pos + col_width, y_pos + 105)
             
-            # 核心修正 2 & 3：所有筆記資訊欄位移到右側「同一個直欄內，由上往下上下疊放」
-            note_x = x_pos + 124
+            # 核心修正 2 & 3：下半部形成同一個大直欄，所有資訊與 3 行橫線「上下重疊，由上往下排放」
             
-            # 【右直欄 - 第一層】：Review Tracker
+            # 【下半部第一層】：Review Tracker 追蹤進度
             c.setFont(FONT_BOLD, 7)
             c.setFillColorRGB(0.1, 0.1, 0.1)
-            c.drawString(note_x, y_pos + 208, "Review Tracker:")
+            c.drawString(x_pos + 10, y_pos + 95, "Review Tracker:")
             c.setFont(FONT_NAME, 6)
             c.setFillColorRGB(0.4, 0.4, 0.4)
-            c.drawString(note_x + 2, y_pos + 198, "1st: __/__  2nd: __/__")
-            c.drawString(note_x + 2, y_pos + 188, "3rd: __/__  4th: __/__")
+            c.drawString(x_pos + 85, y_pos + 95, "1st: __/__   2nd: __/__   3rd: __/__   4th: __/__")
             
-            # 【右直欄 - 第二層】：Key Focus & Stars
+            # 【下半部第二層】：Key Focus 錯題原因與優先度星星
             c.setFont(FONT_BOLD, 7)
             c.setFillColorRGB(0.1, 0.1, 0.1)
-            c.drawString(note_x, y_pos + 174, "Key Focus & Reason:")
+            c.drawString(x_pos + 10, y_pos + 83, "Key Focus:")
             c.setFont(FONT_NAME, 6)
             c.setFillColorRGB(0.4, 0.4, 0.4)
-            c.drawString(note_x + 2, y_pos + 164, f"Type: {q['type']} | Rs: {q['reason'][:10]}")
-            
-            c.setFont(FONT_BOLD, 7)
-            c.setFillColorRGB(0, 0, 0)
             star_display = "★" * q['stars']
-            c.drawString(note_x + 2, y_pos + 154, f"Priority: {star_display}")
+            c.drawString(x_pos + 58, y_pos + 83, f"Type: {q['type']}  |  Reason: {q['reason'][:14]}  |  Priority: {star_display}")
             
-            # 【右直欄 - 第三層】：Core Notes 專用 3 行橫格手寫線，完全乾淨留白超好寫
-            c.setFont(FONT_BOLD, 7.5)
+            # 【下半部第三層】：橫向大拉長的 3 行完全乾淨手寫格線線條
+            c.setFont(FONT_BOLD, 7)
             c.setFillColorRGB(0.1, 0.1, 0.1)
-            c.drawString(note_x, y_pos + 138, "Core Notes & Analysis:")
+            c.drawString(x_pos + 10, y_pos + 70, "Core Notes & Analysis:")
             
             c.setStrokeColorRGB(0.9, 0.9, 0.9)
-            # 在最下方均勻切分出 3 條高質感的淺灰色手寫訂正格線
-            c.line(note_x + 2, y_pos + 115, x_pos + col_width - 8, y_pos + 115) # 第 1 條線
-            c.line(note_x + 2, y_pos + 90, x_pos + col_width - 8, y_pos + 90)   # 第 2 條線
-            c.line(note_x + 2, y_pos + 65, x_pos + col_width - 8, y_pos + 65)   # 第 3 條線
+            # 橫線寬度直接跟著格子橫向大拉滿，寫字超好發揮！
+            c.line(x_pos + 12, y_pos + 52, x_pos + col_width - 12, y_pos + 52) # 第 1 條線
+            c.line(x_pos + 12, y_pos + 34, x_pos + col_width - 12, y_pos + 34) # 第 2 條線
+            c.line(x_pos + 12, y_pos + 16, x_pos + col_width - 12, y_pos + 16) # 第 3 條線
             
             c.setFillColorRGB(0, 0, 0)
             if os.path.exists(temp_path): os.remove(temp_path)
