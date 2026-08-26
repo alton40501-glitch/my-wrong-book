@@ -7,7 +7,7 @@ import io
 import os
 import time
 
-st.set_page_config(page_title="會考高階精準錯題筆記系統", layout="centered")
+st.set_page_config(page_title="6-in-1 Advanced Wrong-Book System", layout="centered")
 
 FONT_NAME = 'Helvetica'
 FONT_BOLD = 'Helvetica-Bold'
@@ -16,7 +16,7 @@ if 'wrong_questions' not in st.session_state:
     st.session_state.wrong_questions = []
 
 st.title("📝 錯題本")
-st.write("Fast continuous shooting. Color preview. PDF strictly marks specific category.")
+st.write("Fast continuous shooting. Color preview. 6-in-1 layout with Left-aligned images and Right-aligned notes.")
 
 # 網頁時間精準加 8 小時同步台灣時區
 web_timestamp = time.time() + (8 * 3600)
@@ -58,7 +58,7 @@ with st.form("wrong_book_form", clear_on_submit=True):
     importance_stars = st.slider("Select Importance Level (重要程度 1-5):", min_value=1, max_value=5, value=3)
     
     submit_button = st.form_submit_with_ui_button if hasattr(st, 'form_submit_with_ui_button') else st.form_submit_button
-    submitted = submit_button("📥 Save Batch to High-Advanced Tracker List")
+    submitted = submit_button("📥 Save Batch to Tracker List")
 
 # 後台高階資料處理
 if submitted and uploaded_files:
@@ -76,7 +76,7 @@ if submitted and uploaded_files:
             
         star_string = "X" * importance_stars
         
-        # 核心優化 1：標籤貼紙畫布寬度徹底內縮回最原始、最常態、完全沒拉長的大小尺寸（寬度200、高度12）
+        # 保持最原始、最常態、完全沒拉長的大小尺寸（寬度200、高度12）
         label_img = np.ones((25, 220, 3), dtype=np.uint8) * 255
         safe_text = f"{saved_time} | {final_subject}"
         cv2.putText(label_img, safe_text, (5, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (50, 50, 50), 1, cv2.LINE_AA)
@@ -96,12 +96,12 @@ if submitted and uploaded_files:
 
 if st.session_state.wrong_questions:
     st.write("---")
-    st.subheader(f"📋 Current High-Advanced List ({len(st.session_state.wrong_questions)} questions)")
+    st.subheader(f"📋 Current List ({len(st.session_state.wrong_questions)} questions)")
     for q in st.session_state.wrong_questions:
         st.write(f"**Question #{q['id']}** | Subject: `{q['subject']}` | Type: `{q['type']}` | Importance: {'★' * q['stars']}")
 
     st.write("---")
-    if st.button("🚀 Pack and Export Advanced A4 Wrong-Book (PDF)"):
+    if st.button("🚀 Pack and Export 6-in-1 A4 PDF"):
         from reportlab.lib.pagesizes import A4
         from reportlab.pdfgen import canvas
         
@@ -109,92 +109,94 @@ if st.session_state.wrong_questions:
         c = canvas.Canvas(pdf_buffer, pagesize=A4)
         width, height = A4
         
-        col_width = 500  
-        row_height = 245 
+        # 1頁放6張的網格參數設定 (2欄 x 3排)
+        col_width = 240
+        row_height = 240
         
-        # A4 1頁3題精準座標（後台全自動鎖定保護，防洗白寫死）
-        start_y = [520, 265, 10]
+        # 後台絕對寫死保護的 A4 一頁 6 題座標陣列
+        start_x = [45, 310]
+        start_y = [545, 290, 35]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
-            page_idx = idx % 3
+            page_idx = idx % 6
             if idx > 0 and page_idx == 0:
                 c.showPage()
                 
-            x_pos = 48 
-            y_pos = start_y[page_idx]
+            x_pos = start_x[page_idx % 2]
+            y_pos = start_y[page_idx // 2]
             
-            # 繪製精美大外框
-            c.setStrokeColorRGB(0.6, 0.6, 0.6)
+            # 繪製題目的灰色外框
+            c.setStrokeColorRGB(0.7, 0.7, 0.7)
             c.setLineWidth(1)
             c.rect(x_pos, y_pos, col_width, row_height, stroke=1, fill=0)
             
-            # 核心優化 1：貼紙完美縮回一開始的俐落尺寸（width=220, height=10），正常大小絕不拉長！
+            # 頂欄完美恢復最原始小尺寸（width=220, height=10）
             temp_lbl_path = f"temp_lbl_{q['id']}.jpg"
             cv2.imwrite(temp_lbl_path, q['label_img'])
             c.drawImage(temp_lbl_path, x_pos + 4, y_pos + row_height - 15, width=220, height=10, preserveAspectRatio=False)
             
-            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            c.setStrokeColorRGB(0.85, 0.85, 0.85)
             c.line(x_pos, y_pos + row_height - 18, x_pos + col_width, y_pos + row_height - 18)
             
-            # 放入彩色原圖題目
+            # 核心修正 1：題目圖檔「完美拉到最左邊」，分配寬度 110 (佔據整個格子的左半邊)
             temp_path = f"temp_{q['id']}.jpg"
             cv2.imwrite(temp_path, q['img'], [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-            c.drawImage(temp_path, x_pos + 12, y_pos + 92, width=col_width - 24, height=130, preserveAspectRatio=True)
+            c.drawImage(temp_path, x_pos + 6, y_pos + 8, width=110, height=210, preserveAspectRatio=True)
             
-            # 底部完全留白大計畫框
-            c.rect(x_pos + 12, y_pos + 8, col_width - 24, 75, stroke=1, fill=0)
+            # 繪製一道垂直中線，把左邊的照片區跟右邊的直向筆記計畫區分開
+            c.setStrokeColorRGB(0.85, 0.85, 0.85)
+            c.line(x_pos + 120, y_pos + 8, x_pos + 120, y_pos + row_height - 18)
             
-            # 核心優化 2：將 Review Tracker 和 Key Focus 全部整合進「最左側的同一個直欄內（上下重疊疊放）」！
+            # 核心修正 2 & 3：所有筆記資訊欄位移到右側「同一個直欄內，由上往下上下疊放」
+            note_x = x_pos + 124
             
-            # 【同一個左直欄 - 上半部】：Review Tracker
+            # 【右直欄 - 第一層】：Review Tracker
             c.setFont(FONT_BOLD, 7)
             c.setFillColorRGB(0.1, 0.1, 0.1)
-            c.drawString(x_pos + 18, y_pos + 68, "Review Tracker:")
-            c.setFont(FONT_NAME, 6.5)
+            c.drawString(note_x, y_pos + 208, "Review Tracker:")
+            c.setFont(FONT_NAME, 6)
             c.setFillColorRGB(0.4, 0.4, 0.4)
-            c.drawString(x_pos + 20, y_pos + 58, "1st: ___/___  2nd: ___/___")
-            c.drawString(x_pos + 20, y_pos + 48, "3rd: ___/___  4th: ___/___")
+            c.drawString(note_x + 2, y_pos + 198, "1st: __/__  2nd: __/__")
+            c.drawString(note_x + 2, y_pos + 188, "3rd: __/__  4th: __/__")
             
-            # 【同一個左直欄 - 下半部】：Key Focus 直接在下方對齊長出來
+            # 【右直欄 - 第二層】：Key Focus & Stars
             c.setFont(FONT_BOLD, 7)
             c.setFillColorRGB(0.1, 0.1, 0.1)
-            c.drawString(x_pos + 18, y_pos + 36, "Key Focus & Reason:")
-            c.setFont(FONT_NAME, 6.5)
+            c.drawString(note_x, y_pos + 174, "Key Focus & Reason:")
+            c.setFont(FONT_NAME, 6)
             c.setFillColorRGB(0.4, 0.4, 0.4)
-            c.drawString(x_pos + 20, y_pos + 26, f"Type: {q['type']} | Rs: {q['reason'][:12]}")
+            c.drawString(note_x + 2, y_pos + 164, f"Type: {q['type']} | Rs: {q['reason'][:10]}")
             
             c.setFont(FONT_BOLD, 7)
             c.setFillColorRGB(0, 0, 0)
             star_display = "★" * q['stars']
-            c.drawString(x_pos + 20, y_pos + 15, f"Priority: {star_display}")
+            c.drawString(note_x + 2, y_pos + 154, f"Priority: {star_display}")
             
-            # 繪製一道優雅的垂直切分線，將最左邊這個「複合直欄」與右邊的寫字區隔開
-            c.setStrokeColorRGB(0.85, 0.85, 0.85)
-            c.line(x_pos + 150, y_pos + 8, x_pos + 150, y_pos + 75)
-            
-            # 【右側完全大拉長欄位】：3行高質感橫格手寫線
-            c.setFont(FONT_BOLD, 8.5)
+            # 【右直欄 - 第三層】：Core Notes 專用 3 行橫格手寫線，完全乾淨留白超好寫
+            c.setFont(FONT_BOLD, 7.5)
             c.setFillColorRGB(0.1, 0.1, 0.1)
-            c.drawString(x_pos + 160, y_pos + 68, "Core Notes & Analysis:")
+            c.drawString(note_x, y_pos + 138, "Core Notes & Analysis:")
             
-            # 橫格線空間徹底橫向大拉長（起點160，一直拉到框框邊緣），超級好寫字！
-            c.line(x_pos + 160, y_pos + 48, x_pos + col_width - 18, y_pos + 48)
-            c.line(x_pos + 160, y_pos + 30, x_pos + col_width - 18, y_pos + 30)
-            c.line(x_pos + 160, y_pos + 12, x_pos + col_width - 18, y_pos + 12)
+            c.setStrokeColorRGB(0.9, 0.9, 0.9)
+            # 在最下方均勻切分出 3 條高質感的淺灰色手寫訂正格線
+            c.line(note_x + 2, y_pos + 115, x_pos + col_width - 8, y_pos + 115) # 第 1 條線
+            c.line(note_x + 2, y_pos + 90, x_pos + col_width - 8, y_pos + 90)   # 第 2 條線
+            c.line(note_x + 2, y_pos + 65, x_pos + col_width - 8, y_pos + 65)   # 第 3 條線
             
+            c.setFillColorRGB(0, 0, 0)
             if os.path.exists(temp_path): os.remove(temp_path)
             if os.path.exists(temp_lbl_path): os.remove(temp_lbl_path)
                 
         c.setFont(FONT_NAME, 8)
-        c.setFillColorRGB(0.5, 0.5, 0.5)
-        c.drawString(48, 18, f"Generated by High-Advanced 3-in-1 Exam Review Tracker System")
+        c.setFillColorRGB(0.6, 0.6, 0.6)
+        c.drawString(45, 20, f"Generated by 6-in-1 Smart Wrong-Book System")
             
         c.save()
         pdf_buffer.seek(0)
         
         st.download_button(
-            label="💾 Download Advanced 3-in-1 A4 PDF",
+            label="💾 Download 6-in-1 A4 PDF",
             data=pdf_buffer,
-            file_name=f"會考高階精準複習錯題本.pdf",
+            file_name=f"會考高效六合一錯題本.pdf",
             mime="application/pdf"
         )
