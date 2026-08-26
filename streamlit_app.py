@@ -20,14 +20,23 @@ if 'wrong_questions' not in st.session_state:
 if 'camera_key' not in st.session_state:
     st.session_state.camera_key = 0
 
+# 記憶功能：初始化範圍輸入框的文字，避免 rerun 時被清空
+if 'input_source' not in st.session_state:
+    st.session_state.input_source = ""
+
 st.title("📝 6-in-1 Smart Wrong-Book System")
 st.write("Fast continuous shooting. Color preview. PDF strictly marks specific category.")
 
 current_date = datetime.today().strftime('%Y-%m-%d')
 st.info(f"📅 Today's Date: {current_date}")
 
-# 1. Scope and Source Input
-source = st.text_input("Enter Exam Source / Scope:", placeholder="e.g., Mock Exam, Unit 3...")
+# 1. Scope and Source Input (使用 session_state 完美鎖定文字，絕不因拍照消失)
+source = st.text_input(
+    "Enter Exam Source / Scope:", 
+    value=st.session_state.input_source,
+    placeholder="e.g., Mock Exam, Unit 3..."
+)
+st.session_state.input_source = source
 
 # 2. Category Selection
 st.subheader("🎯 Select Category for this question:")
@@ -37,8 +46,12 @@ note_type = st.radio(
     index=0
 )
 
-# 3. Camera Input with Dynamic Key for Auto-Reset
-uploaded_file = st.camera_input("📸 Take a photo of the question:", key=f"my_camera_{st.session_state.camera_key}")
+# 3. 核心升級：將拍照元件與預覽區改成左右「橫向並排」
+col_cam, col_prev = st.columns(2)
+
+with col_cam:
+    st.write("### 📸 Camera Window")
+    uploaded_file = st.camera_input("Take a photo of the question:", key=f"my_camera_{st.session_state.camera_key}", label_visibility="collapsed")
 
 # Process photo immediately when taken
 if uploaded_file is not None:
@@ -50,7 +63,7 @@ if uploaded_file is not None:
     st.session_state.wrong_questions.append({
         "id": q_id,
         "img": img,
-        "source": source if source else "Mock Exam",
+        "source": st.session_state.input_source if st.session_state.input_source else "Mock Exam",
         "date": current_date,
         "type": note_type
     })
@@ -61,11 +74,14 @@ if uploaded_file is not None:
     st.session_state.camera_key += 1
     st.rerun()
 
-# 4. Color Preview of the Latest Question Added
-if st.session_state.wrong_questions:
-    st.success(f"📸 Latest photo saved successfully! Camera re-activated automatically.")
-    preview_img = cv2.cvtColor(st.session_state.wrong_questions[-1]['img'], cv2.COLOR_BGR2RGB)
-    st.image(preview_img, caption=f"Latest Question #{len(st.session_state.wrong_questions)} Color Preview", use_container_width=True)
+with col_prev:
+    st.write("### 🖼️ Latest Saved Photo")
+    # 4. 在右側橫向並排顯示最後一整題彩色照片
+    if st.session_state.wrong_questions:
+        preview_img = cv2.cvtColor(st.session_state.wrong_questions[-1]['img'], cv2.COLOR_BGR2RGB)
+        st.image(preview_img, caption=f"Question #{len(st.session_state.wrong_questions)} Color Preview", use_container_width=True)
+    else:
+        st.info("No photo saved yet. Capture your first question on the left!")
 
 # 5. List Management
 if st.session_state.wrong_questions:
@@ -87,7 +103,7 @@ if st.session_state.wrong_questions:
         row_height = 240
         
         start_x = [45, 310]
-        start_y = [540, 290, 40]
+        start_y = [560, 305, 50]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
