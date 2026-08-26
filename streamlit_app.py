@@ -71,7 +71,7 @@ if st.session_state.wrong_questions:
     st.subheader("📋 本次累積錯題管理")
     
     for q in st.session_state.wrong_questions:
-        col_q, col_btn = st.columns()
+        col_q, col_btn = st.columns(2)
         with col_q:
             st.write(f"*題號 {q['id']}* | 來源：{q['source']} | 狀態：`{q['status']}`")
         with col_btn:
