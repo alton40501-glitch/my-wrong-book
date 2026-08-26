@@ -35,13 +35,7 @@ if uploaded_file is not None:
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
     # 影像大升級：先進行細微高斯模糊，再用大方塊自適應二值化，字體清晰且完美拔除顆粒雜訊
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    denoised = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
-    alpha = 1.3  
-    beta = 20    
-    enhanced = cv2.convertScaleAbs(denoised, alpha=alpha, beta=beta)
-    clean_q = cv2.adaptiveThreshold(enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 11)
-    
+    clean_q=img
     st.success("影像處理成功！請確認下方分割結果：")
     
     col1, col2 = st.columns(2)
