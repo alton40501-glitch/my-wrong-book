@@ -19,18 +19,12 @@ if 'wrong_questions' not in st.session_state:
 if 'camera_key' not in st.session_state:
     st.session_state.camera_key = 0
 
-if 'input_source' not in st.session_state:
-    st.session_state.input_source = ""
+# 核心修正 1：網頁大標題精簡改為「錯題本」
+st.title("📝 錯題本")
+st.write("Fast continuous shooting. Color preview. PDF strictly marks specific category.")
 
-st.title("📝 6-in-1 Smart Wrong-Book System")
-
-# 1. Scope and Source Input
-source = st.text_input(
-    "Enter Exam Source / Scope:", 
-    value=st.session_state.input_source,
-    placeholder="例如：理化第三單元、115北模..."
-)
-st.session_state.input_source = source
+current_date = datetime.today().strftime('%Y-%m-%d')
+st.info(f"📅 Today's Date: {current_date}")
 
 # 2. Category Selection
 st.subheader("🎯 Select Category:")
@@ -53,15 +47,12 @@ if uploaded_file is not None:
     nparr = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
-    saved_source = st.session_state.input_source if st.session_state.input_source else "Mock Exam"
-    
-    # 終極修正：直接用秒數手工加上 28800 秒（8小時），100% 避開 timedelta 工具未引入的錯誤！
+    # 核心修正 2：時間自動加上 8 小時（28800秒）補回台灣當下精準時區
     current_timestamp = time.time() + (8 * 3600)
     saved_time = datetime.fromtimestamp(current_timestamp).strftime('%Y-%m-%d %H:%M:%S')
     
-    # 建立純白標籤畫布
+    # 建立純白標籤畫布，使用絕對不變框框的 Hershey 純英文向量線條字體繪製時間與標籤
     label_img = np.ones((30, 480, 3), dtype=np.uint8) * 255
-    # 使用絕對不會變框框的內建向量線條字體繪製時間與分類
     safe_text = f"Time: {saved_time} | Tag: {note_type}"
     cv2.putText(label_img, safe_text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (50, 50, 50), 1, cv2.LINE_AA)
     
@@ -70,7 +61,6 @@ if uploaded_file is not None:
         "id": q_id,
         "img": img,
         "label_img": label_img, 
-        "source": saved_source,
         "date": saved_time,
         "type": note_type
     })
@@ -91,7 +81,7 @@ if st.session_state.wrong_questions:
     st.write("---")
     st.subheader(f"📋 Current List ({len(st.session_state.wrong_questions)} questions)")
     for q in st.session_state.wrong_questions:
-        st.write(f"**Question #{q['id']}** | Time: {q['date']} | Source: {q['source']} | Tag: `{q['type']}`")
+        st.write(f"**Question #{q['id']}** | Time: {q['date']} | Tag: `{q['type']}`")
 
     st.write("---")
     if st.button("🚀 Pack and Export A4 Wrong-Book (PDF)"):
@@ -105,9 +95,9 @@ if st.session_state.wrong_questions:
         col_width = 240
         row_height = 240
         
-        # 用安全乘法代碼鎖定坐標，防止數值被系統洗掉變空白
-        start_x = [45, 310]
-        start_y = [540, 290, 40]
+        # 1頁6題網格座標參數（防系統洗版安全包裝）
+        start_x =
+        start_y =
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
@@ -117,12 +107,12 @@ if st.session_state.wrong_questions:
             x_pos = start_x[page_idx % 2]
             y_pos = start_y[page_idx // 2]
             
-            # Draw boundaries
+            # 繪製題目的灰色外框
             c.setStrokeColorRGB(0.7, 0.7, 0.7)
             c.setLineWidth(1)
             c.rect(x_pos, y_pos, col_width, row_height, stroke=1, fill=0)
             
-            # Insert the safe vector label image (100% correct time & no boxes)
+            # 置入 100% 絕不變框框、時間精準加8的標籤貼紙
             temp_lbl_path = f"temp_lbl_{q['id']}.jpg"
             cv2.imwrite(temp_lbl_path, q['label_img'])
             c.drawImage(temp_lbl_path, x_pos + 4, y_pos + row_height - 16, width=col_width - 8, height=12, preserveAspectRatio=False)
@@ -130,19 +120,20 @@ if st.session_state.wrong_questions:
             c.setStrokeColorRGB(0.85, 0.85, 0.85)
             c.line(x_pos, y_pos + row_height - 18, x_pos + col_width, y_pos + row_height - 18)
             
-            # Insert question photo
+            # 置入彩色題目原圖
             temp_path = f"temp_{q['id']}.jpg"
             cv2.imwrite(temp_path, q['img'], [int(cv2.IMWRITE_JPEG_QUALITY), 90])
             c.drawImage(temp_path, x_pos + 8, y_pos + 95, width=col_width - 16, height=120, preserveAspectRatio=True)
             
-            # Hand-written notes block (100% clean and blank)
+            # 繪製完全空白的手寫大框框
             c.setStrokeColorRGB(0.8, 0.8, 0.8)
             c.rect(x_pos + 8, y_pos + 8, col_width - 16, 75, stroke=1, fill=0)
             
-            # Two light gray lines for notes
+            # 核心修正 3：在大框框內精準均勻畫出 3 條淡淡的淺灰色橫格線（剛好可以工整地寫滿 3 行筆記欄！）
             c.setStrokeColorRGB(0.9, 0.9, 0.9)
-            c.line(x_pos + 14, y_pos + 52, x_pos + col_width - 14, y_pos + 52)
-            c.line(x_pos + 14, y_pos + 28, x_pos + col_width - 14, y_pos + 28)
+            c.line(x_pos + 14, y_pos + 58, x_pos + col_width - 14, y_pos + 58) # 第 1 條線
+            c.line(x_pos + 14, y_pos + 40, x_pos + col_width - 14, y_pos + 40) # 第 2 條線
+            c.line(x_pos + 14, y_pos + 22, x_pos + col_width - 14, y_pos + 22) # 第 3 條線
             
             if os.path.exists(temp_path): os.remove(temp_path)
             if os.path.exists(temp_lbl_path): os.remove(temp_lbl_path)
