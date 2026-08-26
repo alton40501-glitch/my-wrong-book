@@ -96,8 +96,8 @@ if st.session_state.wrong_questions:
         row_height = 240
         
         # 1頁6題網格座標參數（防系統洗版安全包裝）
-        start_x =
-        start_y =
+     start_x = [45, 310]
+     start_y = [550, 290, 30]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
