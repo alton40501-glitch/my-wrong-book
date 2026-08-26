@@ -168,8 +168,8 @@ if st.session_state.wrong_questions:
         # 1頁6題網格座標參數
         col_width = 240
         row_height = 240
-        start_x =
-        start_y =
+        start_x = [45, 310]
+        start_y = [560, 290, 20]
         
         for idx, q in enumerate(st.session_state.wrong_questions):
             page_idx = idx % 6
